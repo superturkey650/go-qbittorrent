@@ -162,7 +162,7 @@ Pause / Resume torrents
 .. code-block:: go
 
     infoHashes = [...]string{
-        "e334ab9ddd9......infohash......fff526cb4},
+        "e334ab9ddd9......infohash......fff526cb4",
         "c9dc36f46d9......infohash......90ebebc46",
         "4c859243615......infohash......8b1f20108",
     }
