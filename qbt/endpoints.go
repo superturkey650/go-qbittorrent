@@ -2,6 +2,7 @@ package qbit
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
@@ -62,7 +63,8 @@ func (c *Client) Login(username string, password string) (loggedIn bool, err err
 	if resp.Status == "200 OK" {
 		c.Authenticated = true
 	} else {
-		fmt.Println(resp.Status)
+		err = errors.New("received bad response")
+		return false, errors.Wrap(err, "couldnt log in")
 	}
 	return c.Authenticated, nil
 }
@@ -77,9 +79,10 @@ func (c *Client) Logout() (loggedOut bool, err error) {
 	if resp.Status == "200 OK" {
 		c.Authenticated = false
 	} else {
-		fmt.Println(resp.Status)
+		err = errors.New("recieved bad response")
+		return false, errors.Wrap(err, "couldn't log out")
 	}
-	return !c.Authenticated, nil
+	return c.Authenticated, nil
 }
 
 //Shutdown shuts down the qbittorrent client
@@ -170,8 +173,8 @@ func (c *Client) DownloadFromLink(link string, options map[string]string) (*http
 }
 
 //DownloadFromFile downloads a torrent from a file
-func (c *Client) DownloadFromFile(fileName string, options map[string]string) (*http.Response, error) {
-	return c.postMultipartFile("command/upload", options, fileName)
+func (c *Client) DownloadFromFile(file string, options map[string]string) (*http.Response, error) {
+	return c.postMultipartFile("command/upload", file, options)
 }
 
 //AddTrackers adds trackers to a specific torrent

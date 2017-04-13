@@ -125,7 +125,7 @@ func (c *Client) postMultipart(endpoint string, data map[string]string) (*http.R
 	return resp, nil
 }
 
-func (c *Client) postMultipartFile(endpoint string, data map[string]string, file string) (*http.Response, error) {
+func (c *Client) postMultipartFile(endpoint string, file string, data map[string]string) (*http.Response, error) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 	// Add your image file
