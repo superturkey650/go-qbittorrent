@@ -12,6 +12,8 @@ Some methods are only supported in qBittorent's latest version (v3.3.1 when writ
 
 It'll be best if you upgrade your client to a latest version.
 
+An example can be found in main.go
+
 Installation
 ============
 
