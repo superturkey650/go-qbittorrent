@@ -31,8 +31,7 @@ Quick usage guide
     qb := qbit.NewClient("http://localhost:8080/")
 
 	qb.Login("admin", "your-secret-password")
-    # not required when 'Bypass from localhost' setting is active.
-    # defaults to admin:admin.
+    // not required when 'Bypass from localhost' setting is active.
 
     torrents = qb.Torrents()
 
@@ -54,7 +53,7 @@ Getting torrents
 - Filter torrents::
 .. code-block:: go
 
-    filters := make(map[string]string){
+    filters := map[string]string{
         "filter": "downloading",
         "category": "my category",
     }
@@ -62,7 +61,7 @@ Getting torrents
     // This will return all torrents which are currently
     // downloading and are labeled as `my category`.
 
-    filters := make(map[string]string){
+    filters := map[string]string{
         "filter": paused,
         "sort": ratio,
     }
