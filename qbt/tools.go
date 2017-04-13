@@ -1,11 +1,11 @@
-package qbit
+package qbt
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
-	"io"
 )
 
 func PrintResponse(body io.ReadCloser) {

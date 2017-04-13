@@ -1,4 +1,4 @@
-package qbit
+package qbt
 
 import (
 	"encoding/json"

@@ -1,4 +1,4 @@
-package qbit
+package qbt
 
 //BasicTorrent holds a basic torrent object from qbittorrent
 type BasicTorrent struct {
