@@ -26,6 +26,7 @@ type BasicTorrent struct {
 }
 
 //Torrent holds a torrent object from qbittorrent
+//with more information than BasicTorrent
 type Torrent struct {
 	AdditionDate           int     `json:"addition_date"`
 	Comment                string  `json:"comment"`
@@ -84,7 +85,8 @@ type TorrentFile struct {
 	Size     int    `json:"size"`
 }
 
-//Sync holds the sync response struct
+//Sync holds the sync response struct which contains
+//the server state and a map of infohashes to Torrents
 type Sync struct {
 	Categories  []string `json:"categories"`
 	FullUpdate  bool     `json:"full_update"`

@@ -55,6 +55,7 @@ func (c *Client) get(endpoint string) (*http.Response, error) {
 		return nil, wrapper.Wrap(err, "failed to build request")
 	}
 
+	// add header
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
 
 	resp, err := c.http.Do(req)
@@ -82,7 +83,7 @@ func (c *Client) getWithParams(endpoint string, opts map[string]string) (*http.R
 		return nil, err
 	}
 
-	//add the headers and params to the request
+	// add the headers and params to the request
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
 	addParams(req, opts)
 
@@ -112,7 +113,7 @@ func (c *Client) post(endpoint string, opts map[string]string) (*http.Response, 
 		return nil, wrapper.Wrap(err, "failed to build request")
 	}
 
-	//add the header and form to the request
+	// add the header and form to the request
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
 	addForm(req, opts)
 
@@ -132,7 +133,7 @@ func (c *Client) postWithHeaders(endpoint string, o map[string]string) (*http.Re
 		return nil, wrapper.Wrap(err, "failed to build request")
 	}
 
-	//add the headers and form to the request
+	// add the headers and form to the request
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
 	addForm(req, o)
@@ -152,7 +153,7 @@ func (c *Client) postMultipart(endpoint string, b bytes.Buffer, cType string) (*
 		return nil, wrapper.Wrap(err, "error creating request")
 	}
 
-	//add the headers, including the content type of the data
+	// add the headers, including the content type of the data
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
 	req.Header.Set("Content-Type", cType)
 
@@ -248,6 +249,7 @@ func (c *Client) Login(username string, password string) (loggedIn bool, err err
 		c.Jar.SetCookies(cookieURL, cookies)
 	}
 
+	// create a new client with the cookie jar and replace the old one
 	c.http = &http.Client{
 		Jar: c.Jar,
 	}
