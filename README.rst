@@ -1,10 +1,12 @@
 ==================
-go-qBittorrent
+go-qbittorrent
 ==================
 
 Golang wrapper for qBittorrent Web API (for versions above v3.1.x).
 
 This wrapper is based on the methods described in `qBittorrent's Official Web API Documentation <https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-Documentation>`__
+
+This project is based on the Python wrapper by 'v1k45 <https://github.com/v1k45/python-qBittorrent>'
 
 Some methods are only supported in qBittorent's latest version (v3.3.1 when writing).
 
@@ -138,29 +140,31 @@ Pause / Resume torrents
 
 - Pausing/ Resuming all torrents::
 
-    qb.pause_all()
-    qb.resume_all()
+    qb.PauseAll()
+    qb.ResumeAll()
 
 - Pausing/ Resuming a speicific torrent::
 
-    info_hash = 'e334ab9ddd....infohash....5d7fff526cb4'
-    qb.pause(info_hash)
-    qb.resume(info_hash)
+    infoHash = "e334ab9ddd....infohash....5d7fff526cb4"
+    qb.Pause(infoHash)
+    qb.Resume(infoHash)
 
 - Pausing/ Resuming multiple torrents::
 
-    info_hash_list = ['e334ab9ddd9......infohash......fff526cb4',
-                      'c9dc36f46d9......infohash......90ebebc46',
-                      '4c859243615......infohash......8b1f20108']
+    infoHashes = [...]string{
+                                    "e334ab9ddd9......infohash......fff526cb4},
+                                    "c9dc36f46d9......infohash......90ebebc46",
+                                    "4c859243615......infohash......8b1f20108",
+                                }
 
-    qb.pause_multiple(info_hash_list)
-    qb.resume_multipe(info_hash_list)
+    qb.PauseMultiple(infoHashes)
+    qb.ResumeMultiple(infoHashes)
 
 
 Full API method documentation
 =============================
 
-All API methods of qBittorrent are mentioned @ `Read the docs <http://python-qbittorrent.readthedocs.org/en/latest/?badge=latest>`__
+All API methods of qBittorrent are mentioned in `docs.txt`__
 
 Authors
 =======
@@ -168,16 +172,11 @@ Authors
 Maintainer
 ----------
 
-- `Vikas Yadav (v1k45) <https://www.github.com/v1k45/>`__
+- `Jared Mosley (jaredlmosley) <https://www.github.com/jaredlmosley/>`__
 
 Contributors
 ------------
 
-*By chronological order*
-
-- `Matt Smith (psykzz) <https://github.com/psykzz>`__
-- `Nicolas Wright (dozedoff) <https://github.com/dozedoff>`__
-- `sbivol <https://github.com/sbivol>`__
 - Your name here :)
 
 TODO
