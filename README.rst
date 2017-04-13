@@ -6,7 +6,7 @@ Golang wrapper for qBittorrent Web API (for versions above v3.1.x).
 
 This wrapper is based on the methods described in `qBittorrent's Official Web API Documentation <https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-Documentation>`__
 
-This project is based on the Python wrapper by `v1k45 <https://github.com/v1k45/python-qBittorrent>`
+This project is based on the Python wrapper by `v1k45 <https://github.com/v1k45/python-qBittorrent>`__
 
 Some methods are only supported in qBittorent's latest version (v3.3.1 when writing).
 
@@ -90,7 +90,7 @@ Downloading torrents
     options := map[string]string{}
     links := [...]string{link1, link2, link3}
     for l := range links{
-        qb.FownloadFromLink(l, options)
+        qb.DownloadFromLink(l, options)
     }
 
 - Downloading torrents by file::
@@ -123,7 +123,7 @@ Downloading torrents
         "savepath": savePath
     }
     magnetLink = "magnet:?xt=urn:btih:e334ab9ddd91c10938a7....."
-    qb.downloadFromLink(magnetLink, options)
+    qb.DownloadFromLink(magnetLink, options)
 
 - Applying labels to downloads::
 .. code-block:: go
@@ -133,7 +133,7 @@ Downloading torrents
         "label": label
     }
     file = "path/to/file.torrent"
-    qb.downloadFromFile(file, options)
+    qb.DownloadFromFile(file, options)
 
     // same for links.
     category = "anime"
@@ -141,7 +141,7 @@ Downloading torrents
         "label": label
     }
     magnetLink = "magnet:?xt=urn:btih:e334ab9ddd91c10938a7....."
-    qb.downloadFromLink(magnetLink, options)
+    qb.DownloadFromLink(magnetLink, options)
 
 Pause / Resume torrents
 -----------------------
@@ -152,7 +152,7 @@ Pause / Resume torrents
     qb.PauseAll()
     qb.ResumeAll()
 
-- Pausing/ Resuming a speicific torrent::
+- Pausing/ Resuming a specific torrent::
 .. code-block:: go
 
     infoHash = "e334ab9ddd....infohash....5d7fff526cb4"
@@ -175,7 +175,7 @@ Pause / Resume torrents
 Full API method documentation
 =============================
 
-All API methods of qBittorrent are mentioned in docs.txt __
+All API methods of qBittorrent are mentioned in docs.txt
 
 Authors
 =======
