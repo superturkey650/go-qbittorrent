@@ -1,15 +1,21 @@
 package qbt
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
+	"os"
+	"path"
 	//"net/http/httputil"
 	"net/url"
 	"strconv"
 	"strings"
+
+	wrapper "github.com/pkg/errors"
 
 	"golang.org/x/net/publicsuffix"
 )
@@ -27,17 +33,202 @@ type Client struct {
 func NewClient(url string) *Client {
 	c := &Client{}
 
+	// ensure url ends with "/"
 	if url[len(url)-1:] != "/" {
 		url = url + "/"
 	}
 
 	c.URL = url
 
+	// create cookie jar
 	c.Jar, _ = cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	c.http = &http.Client{
 		Jar: c.Jar,
 	}
 	return c
+}
+
+//get will perform a GET request with no parameters
+func (c *Client) get(endpoint string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", c.URL+endpoint, nil)
+	if err != nil {
+		return nil, wrapper.Wrap(err, "failed to build request")
+	}
+
+	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, wrapper.Wrap(err, "failed to perform request")
+	}
+
+	return resp, nil
+}
+
+//addParams will encode and add params to the request object
+func addParams(req *http.Request, opts map[string]string) {
+	q := req.URL.Query()
+	for k, v := range opts {
+		q.Add(k, v)
+	}
+	req.URL.RawQuery = q.Encode()
+}
+
+//getWithParams will perform a GET request after adding the provided parameters
+func (c *Client) getWithParams(endpoint string, opts map[string]string) (*http.Response, error) {
+
+	req, err := http.NewRequest("GET", c.URL+endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	//add the headers and params to the request
+	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
+	addParams(req, opts)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, wrapper.Wrap(err, "failed to perform request")
+	}
+
+	req.Close = true
+
+	return resp, nil
+}
+
+//addForm will add provided options to a form and add it to a request
+func addForm(req *http.Request, opts map[string]string) {
+	form := url.Values{}
+	for k, v := range opts {
+		form.Add(k, v)
+	}
+	req.PostForm = form
+}
+
+//post will perform a POST request with no content-type specified
+func (c *Client) post(endpoint string, opts map[string]string) (*http.Response, error) {
+	req, err := http.NewRequest("POST", c.URL+endpoint, nil)
+	if err != nil {
+		return nil, wrapper.Wrap(err, "failed to build request")
+	}
+
+	//add the header and form to the request
+	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
+	addForm(req, opts)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, wrapper.Wrap(err, "failed to perform request")
+	}
+
+	return resp, nil
+
+}
+
+//postWithHeaders will perform a post request with a specific content type
+func (c *Client) postWithHeaders(endpoint string, o map[string]string) (*http.Response, error) {
+	req, err := http.NewRequest("POST", c.URL+endpoint, nil)
+	if err != nil {
+		return nil, wrapper.Wrap(err, "failed to build request")
+	}
+
+	//add the headers and form to the request
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
+	addForm(req, o)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, wrapper.Wrap(err, "failed to perform request")
+	}
+
+	return resp, nil
+}
+
+//postMultipart will perform a multiple part POST request
+func (c *Client) postMultipart(endpoint string, b bytes.Buffer, cType string) (*http.Response, error) {
+	req, err := http.NewRequest("POST", c.URL+endpoint, &b)
+	if err != nil {
+		return nil, wrapper.Wrap(err, "error creating request")
+	}
+
+	//add the headers, including the content type of the data
+	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
+	req.Header.Set("Content-Type", cType)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, wrapper.Wrap(err, "failed to perform request")
+	}
+
+	return resp, nil
+}
+
+//writeOptions will write a map to the buffer through multipart.NewWriter
+func writeOptions(w *multipart.Writer, opts map[string]string) {
+	for key, val := range opts {
+		w.WriteField(key, val)
+	}
+}
+
+//postMultipartData will perform a multiple part POST request without a file
+func (c *Client) postMultipartData(endpoint string, opts map[string]string) (*http.Response, error) {
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+
+	//write the options to the buffer
+	writeOptions(w, opts)
+
+	//close the writer
+	if err := w.Close(); err != nil {
+		return nil, wrapper.Wrap(err, "failed to close writer")
+	}
+
+	resp, err := c.postMultipart(endpoint, b, w.FormDataContentType())
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+//postMultipartFile will perform a multiple part POST request with a file
+func (c *Client) postMultipartFile(endpoint string, file string, opts map[string]string) (*http.Response, error) {
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+
+	//open the file for reading
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, wrapper.Wrap(err, "error opening file")
+	}
+	defer f.Close()
+
+	//create form for writing to
+	fw, err := w.CreateFormFile("torrents", path.Base(file))
+	if err != nil {
+		return nil, wrapper.Wrap(err, "error adding file")
+	}
+
+	//write the options to the form
+	writeOptions(w, opts)
+
+	//copy the file to the form
+	if _, err = io.Copy(fw, f); err != nil {
+		return nil, wrapper.Wrap(err, "error copying file")
+	}
+
+	//close the writer
+	if err := w.Close(); err != nil {
+		return nil, wrapper.Wrap(err, "failed to close writer")
+	}
+
+	resp, err := c.postMultipart(endpoint, b, w.FormDataContentType())
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 //Login logs you in to the qbittorrent client
@@ -50,9 +241,10 @@ func (c *Client) Login(username string, password string) (loggedIn bool, err err
 	if err != nil {
 		return false, err
 	}
-	cookieURL, _ := url.Parse("http://localhost:8080")
 
+	// add cookies to cookie jar
 	if cookies := resp.Cookies(); len(cookies) > 0 {
+		cookieURL, _ := url.Parse("http://localhost:8080")
 		c.Jar.SetCookies(cookieURL, cookies)
 	}
 
@@ -60,11 +252,12 @@ func (c *Client) Login(username string, password string) (loggedIn bool, err err
 		Jar: c.Jar,
 	}
 
+	// check for correct status code and change authenticated status accordingly
 	if resp.Status == "200 OK" {
 		c.Authenticated = true
 	} else {
 		err = errors.New("received bad response")
-		return false, errors.Wrap(err, "couldnt log in")
+		return false, wrapper.Wrap(err, "couldnt log in")
 	}
 	return c.Authenticated, nil
 }
@@ -75,12 +268,13 @@ func (c *Client) Logout() (loggedOut bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	fmt.Println(resp)
+
+	// check for correct status close and change authenticated status accordingly
 	if resp.Status == "200 OK" {
 		c.Authenticated = false
 	} else {
 		err = errors.New("recieved bad response")
-		return false, errors.Wrap(err, "couldn't log out")
+		return false, wrapper.Wrap(err, "couldn't log out")
 	}
 	return c.Authenticated, nil
 }
@@ -94,14 +288,16 @@ func (c *Client) Shutdown() (shuttingDown bool, err error) {
 //Torrents gets a list of all torrents in qbittorrent matching your filter
 func (c *Client) Torrents(filters map[string]string) (torrentList []BasicTorrent, err error) {
 	var t []BasicTorrent
-	params := make(map[string]string)
+
+	// change "status"" filter to "filter"
 	for k, v := range filters {
 		if k == "status" {
-			k = "filter"
+			filters["filter"] = v
+			delete(filters, "status")
 		}
-		params[k] = v
+
 	}
-	resp, err := c.getWithParams("query/torrents", params)
+	resp, err := c.getWithParams("query/torrents", filters)
 	if err != nil {
 		return t, err
 	}
@@ -156,8 +352,10 @@ func (c *Client) TorrentFiles(infoHash string) ([]TorrentFile, error) {
 //Sync syncs main data of qbittorrent
 func (c *Client) Sync(rid string) (Sync, error) {
 	var s Sync
+
 	params := make(map[string]string)
 	params["rid"] = rid
+
 	resp, err := c.getWithParams("sync/maindata", params)
 	if err != nil {
 		return s, err
@@ -169,7 +367,7 @@ func (c *Client) Sync(rid string) (Sync, error) {
 //DownloadFromLink starts downloading a torrent from a link
 func (c *Client) DownloadFromLink(link string, options map[string]string) (*http.Response, error) {
 	options["urls"] = link
-	return c.postMultipart("command/download", options)
+	return c.postMultipartData("command/download", options)
 }
 
 //DownloadFromFile downloads a torrent from a file
@@ -182,6 +380,7 @@ func (c *Client) AddTrackers(infoHash string, trackers string) (*http.Response, 
 	params := make(map[string]string)
 	params["hash"] = strings.ToLower(infoHash)
 	params["urls"] = trackers
+
 	return c.post("command/addTrackers", params)
 }
 
@@ -189,8 +388,12 @@ func (c *Client) AddTrackers(infoHash string, trackers string) (*http.Response, 
 func (Client) processInfoHashList(infoHashList []string) (hashMap map[string]string) {
 	d := map[string]string{}
 	infoHash := ""
-	for _, v := range infoHashList {
-		infoHash = infoHash + "|" + v
+	for i, v := range infoHashList {
+		if i > 0 {
+			infoHash += "|" + v
+		} else {
+			infoHash = v
+		}
 	}
 	d["hashes"] = infoHash
 	return d
@@ -200,6 +403,7 @@ func (Client) processInfoHashList(infoHashList []string) (hashMap map[string]str
 func (c *Client) Pause(infoHash string) (*http.Response, error) {
 	params := make(map[string]string)
 	params["hash"] = strings.ToLower(infoHash)
+
 	return c.post("command/pause", params)
 }
 
@@ -218,6 +422,7 @@ func (c *Client) PauseMultiple(infoHashList []string) (*http.Response, error) {
 func (c *Client) SetLabel(infoHashList []string, label string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	params["label"] = label
+
 	return c.post("command/setLabel", params)
 }
 
@@ -225,6 +430,7 @@ func (c *Client) SetLabel(infoHashList []string, label string) (*http.Response, 
 func (c *Client) SetCategory(infoHashList []string, category string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	params["category"] = category
+
 	return c.post("command/setLabel", params)
 }
 
@@ -290,16 +496,19 @@ func (c *Client) SetMinPriority(infoHashList []string) (*http.Response, error) {
 
 //SetFilePriority sets the priority for a specific torrent file
 func (c *Client) SetFilePriority(infoHash string, fileID string, priority string) (*http.Response, error) {
+	// disallow certain priorities that are not allowed by qbittorrent
 	priorities := [...]string{"0", "1", "2", "7"}
 	for _, v := range priorities {
 		if v == priority {
-			fmt.Println("error, priority no tavailable")
+			return nil, errors.New("priority not available")
 		}
 	}
+
 	params := make(map[string]string)
 	params["hash"] = infoHash
 	params["id"] = fileID
 	params["priority"] = priority
+
 	return c.post("command/setFilePriority", params)
 }
 

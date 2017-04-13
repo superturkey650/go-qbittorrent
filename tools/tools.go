@@ -16,10 +16,11 @@ func PrintResponse(body io.ReadCloser) {
 }
 
 //PrintRequest prints a request
-func PrintRequest(req *http.Request) {
+func PrintRequest(req *http.Request) error {
 	r, err := httputil.DumpRequest(req, true)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	fmt.Println("request: " + string(r))
+	return nil
 }

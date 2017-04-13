@@ -11,7 +11,7 @@ func main() {
 	qb := qbt.NewClient("http://localhost:8080/")
 
 	// login to the client
-	resp, err := qb.Login("username", "password")
+	_, err := qb.Login("username", "password")
 	if err != nil {
 		fmt.Println(err)
 	}
