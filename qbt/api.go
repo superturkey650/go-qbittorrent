@@ -25,7 +25,6 @@ type Client struct {
 	http          *http.Client
 	URL           string
 	Authenticated bool
-	Session       string //replace with session type
 	Jar           http.CookieJar
 }
 
@@ -55,7 +54,7 @@ func (c *Client) get(endpoint string) (*http.Response, error) {
 		return nil, wrapper.Wrap(err, "failed to build request")
 	}
 
-	// add header
+	// add user-agent header to allow qbittorrent to identify us
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
 
 	resp, err := c.http.Do(req)
@@ -83,8 +82,10 @@ func (c *Client) getWithParams(endpoint string, opts map[string]string) (*http.R
 		return nil, err
 	}
 
-	// add the headers and params to the request
+	// add user-agent header to allow qbittorrent to identify us
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
+
+	//add optional paramaters that the user wants
 	addParams(req, opts)
 
 	resp, err := c.http.Do(req)
@@ -113,8 +114,10 @@ func (c *Client) post(endpoint string, opts map[string]string) (*http.Response, 
 		return nil, wrapper.Wrap(err, "failed to build request")
 	}
 
-	// add the header and form to the request
+	// add user-agent header to allow qbittorrent to identify us
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
+
+	// add optional parameters that the user wants
 	addForm(req, opts)
 
 	resp, err := c.http.Do(req)
@@ -133,9 +136,11 @@ func (c *Client) postWithHeaders(endpoint string, o map[string]string) (*http.Re
 		return nil, wrapper.Wrap(err, "failed to build request")
 	}
 
-	// add the headers and form to the request
+	// add the content-type so qbittorrent knows what to expect
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	// add user-agent header to allow qbittorrent to identify us
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
+	// add the optional parameters that the user wants
 	addForm(req, o)
 
 	resp, err := c.http.Do(req)
@@ -153,9 +158,10 @@ func (c *Client) postMultipart(endpoint string, b bytes.Buffer, cType string) (*
 		return nil, wrapper.Wrap(err, "error creating request")
 	}
 
-	// add the headers, including the content type of the data
-	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
+	// add the content-type so qbittorrent knows what to expect
 	req.Header.Set("Content-Type", cType)
+	// add user-agent header to allow qbittorrent to identify us
+	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -177,10 +183,11 @@ func (c *Client) postMultipartData(endpoint string, opts map[string]string) (*ht
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 
-	//write the options to the buffer
+	// write the options to the buffer
+	// will contain the link string
 	writeOptions(w, opts)
 
-	//close the writer
+	// close the writer before doing request to get closing line on multipart request
 	if err := w.Close(); err != nil {
 		return nil, wrapper.Wrap(err, "failed to close writer")
 	}
@@ -198,28 +205,30 @@ func (c *Client) postMultipartFile(endpoint string, file string, opts map[string
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 
-	//open the file for reading
+	// open the file for reading
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, wrapper.Wrap(err, "error opening file")
 	}
+	// defer the closing of the file until the end of function
+	// so we can still copy its contents
 	defer f.Close()
 
-	//create form for writing to
+	// create form for writing the file to and give it the filename
 	fw, err := w.CreateFormFile("torrents", path.Base(file))
 	if err != nil {
 		return nil, wrapper.Wrap(err, "error adding file")
 	}
 
-	//write the options to the form
+	// write the options to the buffer
 	writeOptions(w, opts)
 
-	//copy the file to the form
+	// copy the file contents into the form
 	if _, err = io.Copy(fw, f); err != nil {
 		return nil, wrapper.Wrap(err, "error copying file")
 	}
 
-	//close the writer
+	// close the writer before doing request to get closing line on multipart request
 	if err := w.Close(); err != nil {
 		return nil, wrapper.Wrap(err, "failed to close writer")
 	}
@@ -233,6 +242,7 @@ func (c *Client) postMultipartFile(endpoint string, file string, opts map[string
 }
 
 //Login logs you in to the qbittorrent client
+//returns the current authentication status
 func (c *Client) Login(username string, password string) (loggedIn bool, err error) {
 	creds := make(map[string]string)
 	creds["username"] = username
@@ -243,55 +253,63 @@ func (c *Client) Login(username string, password string) (loggedIn bool, err err
 		return false, err
 	}
 
-	// add cookies to cookie jar
+	// check for correct status code
+	if resp.Status != "200 OK" {
+		err = errors.New("received bad response")
+		return false, wrapper.Wrap(err, "couldnt log in")
+	}
+
+	// change authentication status so we know were authenticated in later requests
+	c.Authenticated = true
+
+	// add the cookie to cookie jar to authenticate later requests
 	if cookies := resp.Cookies(); len(cookies) > 0 {
 		cookieURL, _ := url.Parse("http://localhost:8080")
 		c.Jar.SetCookies(cookieURL, cookies)
 	}
 
 	// create a new client with the cookie jar and replace the old one
+	// so that all our later requests are authenticated
 	c.http = &http.Client{
 		Jar: c.Jar,
 	}
 
-	// check for correct status code and change authenticated status accordingly
-	if resp.Status == "200 OK" {
-		c.Authenticated = true
-	} else {
-		err = errors.New("received bad response")
-		return false, wrapper.Wrap(err, "couldnt log in")
-	}
 	return c.Authenticated, nil
 }
 
 //Logout logs you out of the qbittorrent client
+//returns the current authentication status
 func (c *Client) Logout() (loggedOut bool, err error) {
 	resp, err := c.get("logout")
 	if err != nil {
 		return false, err
 	}
 
-	// check for correct status close and change authenticated status accordingly
-	if resp.Status == "200 OK" {
-		c.Authenticated = false
-	} else {
-		err = errors.New("recieved bad response")
-		return false, wrapper.Wrap(err, "couldn't log out")
+	// check for correct status code
+	if resp.Status != "200 OK" {
+		err = errors.New("received bad response")
+		return false, wrapper.Wrap(err, "couldnt log in")
 	}
+
+	// change authentication status so we know were not authenticated in later requests
+	c.Authenticated = false
+
 	return c.Authenticated, nil
 }
 
 //Shutdown shuts down the qbittorrent client
 func (c *Client) Shutdown() (shuttingDown bool, err error) {
 	resp, err := c.get("command/shutdown")
+
+	// return true if successful
 	return resp.Status == "200 OK", err
 }
 
-//Torrents gets a list of all torrents in qbittorrent matching your filter
+//Torrents returns a list of all torrents in qbittorrent matching your filter
 func (c *Client) Torrents(filters map[string]string) (torrentList []BasicTorrent, err error) {
 	var t []BasicTorrent
 
-	// change "status"" filter to "filter"
+	// change "status"" filter to "filter" for backwards compatability with old WEBUI API docs
 	for k, v := range filters {
 		if k == "status" {
 			filters["filter"] = v
@@ -307,7 +325,7 @@ func (c *Client) Torrents(filters map[string]string) (torrentList []BasicTorrent
 	return t, nil
 }
 
-//Torrent gets a specific torrent
+//Torrent returns a specific torrent matching the infoHash
 func (c *Client) Torrent(infoHash string) (Torrent, error) {
 	var t Torrent
 	resp, err := c.get("query/propertiesGeneral/" + strings.ToLower(infoHash))
@@ -318,7 +336,7 @@ func (c *Client) Torrent(infoHash string) (Torrent, error) {
 	return t, nil
 }
 
-//TorrentTrackers gets all trackers for a specific torrent
+//TorrentTrackers returns all trackers for a specific torrent matching the infoHash
 func (c *Client) TorrentTrackers(infoHash string) ([]Tracker, error) {
 	var t []Tracker
 	resp, err := c.get("query/propertiesTrackers/" + strings.ToLower(infoHash))
@@ -329,7 +347,7 @@ func (c *Client) TorrentTrackers(infoHash string) ([]Tracker, error) {
 	return t, nil
 }
 
-//TorrentWebSeeds gets seeders for a specific torrent
+//TorrentWebSeeds returns seeders for a specific torrent matching the infoHash
 func (c *Client) TorrentWebSeeds(infoHash string) ([]WebSeed, error) {
 	var w []WebSeed
 	resp, err := c.get("query/propertiesWebSeeds/" + strings.ToLower(infoHash))
@@ -340,7 +358,7 @@ func (c *Client) TorrentWebSeeds(infoHash string) ([]WebSeed, error) {
 	return w, nil
 }
 
-//TorrentFiles gets the files of a specifc torrent
+//TorrentFiles gets the files of a specifc torrent matching the infoHash
 func (c *Client) TorrentFiles(infoHash string) ([]TorrentFile, error) {
 	var t []TorrentFile
 	resp, err := c.get("query/propertiesFiles" + strings.ToLower(infoHash))
@@ -351,7 +369,7 @@ func (c *Client) TorrentFiles(infoHash string) ([]TorrentFile, error) {
 	return t, nil
 }
 
-//Sync syncs main data of qbittorrent
+//Sync returns the server state and list of torrents in one struct
 func (c *Client) Sync(rid string) (Sync, error) {
 	var s Sync
 
@@ -372,12 +390,12 @@ func (c *Client) DownloadFromLink(link string, options map[string]string) (*http
 	return c.postMultipartData("command/download", options)
 }
 
-//DownloadFromFile downloads a torrent from a file
+//DownloadFromFile starts downloading a torrent from a file
 func (c *Client) DownloadFromFile(file string, options map[string]string) (*http.Response, error) {
 	return c.postMultipartFile("command/upload", file, options)
 }
 
-//AddTrackers adds trackers to a specific torrent
+//AddTrackers adds trackers to a specific torrent matching infoHash
 func (c *Client) AddTrackers(infoHash string, trackers string) (*http.Response, error) {
 	params := make(map[string]string)
 	params["hash"] = strings.ToLower(infoHash)
@@ -386,7 +404,8 @@ func (c *Client) AddTrackers(infoHash string, trackers string) (*http.Response, 
 	return c.post("command/addTrackers", params)
 }
 
-//process the hash list and put it into a combined (single element) map with all hashes connected with '|'
+//processInfoHashList puts list into a combined (single element) map with all hashes connected with '|'
+//this is how the WEBUI API recognizes multiple hashes
 func (Client) processInfoHashList(infoHashList []string) (hashMap map[string]string) {
 	d := map[string]string{}
 	infoHash := ""
@@ -401,7 +420,7 @@ func (Client) processInfoHashList(infoHashList []string) (hashMap map[string]str
 	return d
 }
 
-//Pause pauses a specific torrent
+//Pause pauses a specific torrent matching infoHash
 func (c *Client) Pause(infoHash string) (*http.Response, error) {
 	params := make(map[string]string)
 	params["hash"] = strings.ToLower(infoHash)
@@ -414,13 +433,13 @@ func (c *Client) PauseAll() (*http.Response, error) {
 	return c.get("command/pauseAll")
 }
 
-//PauseMultiple pauses a list of torrents
+//PauseMultiple pauses a list of torrents matching the infoHashes
 func (c *Client) PauseMultiple(infoHashList []string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	return c.post("command/pauseAll", params)
 }
 
-//SetLabel sets the labels for a list of torrents
+//SetLabel sets the labels for a list of torrents matching infoHashes
 func (c *Client) SetLabel(infoHashList []string, label string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	params["label"] = label
@@ -428,7 +447,7 @@ func (c *Client) SetLabel(infoHashList []string, label string) (*http.Response, 
 	return c.post("command/setLabel", params)
 }
 
-//SetCategory sets the category for a list of torrents
+//SetCategory sets the category for a list of torrents matching infoHashes
 func (c *Client) SetCategory(infoHashList []string, category string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	params["category"] = category
@@ -436,69 +455,69 @@ func (c *Client) SetCategory(infoHashList []string, category string) (*http.Resp
 	return c.post("command/setLabel", params)
 }
 
-//Resume resumes a specific torrent
+//Resume resumes a specific torrent matching infoHash
 func (c *Client) Resume(infoHash string) (*http.Response, error) {
 	params := make(map[string]string)
 	params["hash"] = strings.ToLower(infoHash)
 	return c.post("command/resume", params)
 }
 
-//ResumeAll resumes all torrents
+//ResumeAll resumes all torrents matching infoHashes
 func (c *Client) ResumeAll(infoHashList []string) (*http.Response, error) {
 	return c.get("command/resumeAll")
 }
 
-//ResumeMultiple resumes a list of torrents
+//ResumeMultiple resumes a list of torrents matching infoHashes
 func (c *Client) ResumeMultiple(infoHashList []string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	return c.post("command/resumeAll", params)
 }
 
-//DeleteTemp deletes the temporary files for a list of torrents
+//DeleteTemp deletes the temporary files for a list of torrents matching infoHashes
 func (c *Client) DeleteTemp(infoHashList []string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	return c.post("command/delete", params)
 }
 
-//DeletePermanently deletes all files for a list of torrents
+//DeletePermanently deletes all files for a list of torrents matching infoHashes
 func (c *Client) DeletePermanently(infoHashList []string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	return c.post("command/deletePerm", params)
 }
 
-//Recheck rechecks a list of torrents
+//Recheck rechecks a list of torrents matching infoHashes
 func (c *Client) Recheck(infoHashList []string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	return c.post("command/recheck", params)
 }
 
-//IncreasePriority increases the priority of a list of torrents
+//IncreasePriority increases the priority of a list of torrents matching infoHashes
 func (c *Client) IncreasePriority(infoHashList []string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	return c.post("command/increasePrio", params)
 }
 
-//DecreasePriority decreases the priority of a list of torrents
+//DecreasePriority decreases the priority of a list of torrents matching infoHashes
 func (c *Client) DecreasePriority(infoHashList []string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	return c.post("command/decreasePrio", params)
 }
 
-//SetMaxPriority sets the max priority for a list of torrents
+//SetMaxPriority sets the max priority for a list of torrents matching infoHashes
 func (c *Client) SetMaxPriority(infoHashList []string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	return c.post("command/topPrio", params)
 }
 
-//SetMinPriority sets the min priority for a list of torrents
+//SetMinPriority sets the min priority for a list of torrents matching infoHashes
 func (c *Client) SetMinPriority(infoHashList []string) (*http.Response, error) {
 	params := c.processInfoHashList(infoHashList)
 	return c.post("command/bottomPrio", params)
 }
 
-//SetFilePriority sets the priority for a specific torrent file
+//SetFilePriority sets the priority for a specific torrent filematching infoHash
 func (c *Client) SetFilePriority(infoHash string, fileID string, priority string) (*http.Response, error) {
-	// disallow certain priorities that are not allowed by qbittorrent
+	// disallow certain priorities that are not allowed by the WEBUI API
 	priorities := [...]string{"0", "1", "2", "7"}
 	for _, v := range priorities {
 		if v == priority {
