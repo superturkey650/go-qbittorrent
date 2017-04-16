@@ -30,8 +30,8 @@
       <file leaf-file-name="api.go" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/qbt/api.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-90">
-              <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+            <state relative-caret-position="2955">
+              <caret line="215" column="36" lean-forward="false" selection-start-line="215" selection-start-column="36" selection-end-line="215" selection-end-column="36" />
               <folding />
             </state>
           </provider>
@@ -84,6 +84,7 @@
         <option value="$PROJECT_DIR$/main.go" />
         <option value="$PROJECT_DIR$/qbt/requests.go" />
         <option value="$PROJECT_DIR$/qbt/endpoints.go" />
+        <option value="$PROJECT_DIR$/qbt/api.go" />
       </list>
     </option>
   </component>
@@ -426,8 +427,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/qbt/api.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-90">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        <state relative-caret-position="2955">
+          <caret line="215" column="36" lean-forward="false" selection-start-line="215" selection-start-column="36" selection-end-line="215" selection-end-column="36" />
           <folding />
         </state>
       </provider>

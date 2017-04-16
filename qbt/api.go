@@ -20,6 +20,12 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
+//BadPriority means the priority is not allowd by qbittorrent
+var ErrBadPriority error = errors.New("priority not available")
+
+//BadResponse means there qbittorrent sent back an unexpected response
+var ErrBadResponse error = errors.New("received bad response")
+
 //Client creates a connection to qbittorrent and performs requests
 type Client struct {
 	http          *http.Client
@@ -48,7 +54,7 @@ func NewClient(url string) *Client {
 }
 
 //get will perform a GET request with no parameters
-func (c *Client) get(endpoint string) (*http.Response, error) {
+func (c *Client) get(endpoint string, opts map[string]string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", c.URL+endpoint, nil)
 	if err != nil {
 		return nil, wrapper.Wrap(err, "failed to build request")
@@ -57,54 +63,21 @@ func (c *Client) get(endpoint string) (*http.Response, error) {
 	// add user-agent header to allow qbittorrent to identify us
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
 
+	// add optional parameters that the user wants
+	if opts != nil {
+		q := req.URL.Query()
+		for k, v := range opts {
+			q.Add(k, v)
+		}
+		req.URL.RawQuery = q.Encode()
+	}
+
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, wrapper.Wrap(err, "failed to perform request")
 	}
 
 	return resp, nil
-}
-
-//addParams will encode and add params to the request object
-func addParams(req *http.Request, opts map[string]string) {
-	q := req.URL.Query()
-	for k, v := range opts {
-		q.Add(k, v)
-	}
-	req.URL.RawQuery = q.Encode()
-}
-
-//getWithParams will perform a GET request after adding the provided parameters
-func (c *Client) getWithParams(endpoint string, opts map[string]string) (*http.Response, error) {
-
-	req, err := http.NewRequest("GET", c.URL+endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// add user-agent header to allow qbittorrent to identify us
-	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
-
-	//add optional paramaters that the user wants
-	addParams(req, opts)
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, wrapper.Wrap(err, "failed to perform request")
-	}
-
-	req.Close = true
-
-	return resp, nil
-}
-
-//addForm will add provided options to a form and add it to a request
-func addForm(req *http.Request, opts map[string]string) {
-	form := url.Values{}
-	for k, v := range opts {
-		form.Add(k, v)
-	}
-	req.PostForm = form
 }
 
 //post will perform a POST request with no content-type specified
@@ -114,34 +87,19 @@ func (c *Client) post(endpoint string, opts map[string]string) (*http.Response, 
 		return nil, wrapper.Wrap(err, "failed to build request")
 	}
 
-	// add user-agent header to allow qbittorrent to identify us
-	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
-
-	// add optional parameters that the user wants
-	addForm(req, opts)
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, wrapper.Wrap(err, "failed to perform request")
-	}
-
-	return resp, nil
-
-}
-
-//postWithHeaders will perform a post request with a specific content type
-func (c *Client) postWithHeaders(endpoint string, o map[string]string) (*http.Response, error) {
-	req, err := http.NewRequest("POST", c.URL+endpoint, nil)
-	if err != nil {
-		return nil, wrapper.Wrap(err, "failed to build request")
-	}
-
 	// add the content-type so qbittorrent knows what to expect
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	// add user-agent header to allow qbittorrent to identify us
 	req.Header.Set("User-Agent", "go-qbittorrent v0.1")
-	// add the optional parameters that the user wants
-	addForm(req, o)
+
+	// add optional parameters that the user wants
+	if opts != nil {
+		form := url.Values{}
+		for k, v := range opts {
+			form.Add(k, v)
+		}
+		req.PostForm = form
+	}
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -149,6 +107,7 @@ func (c *Client) postWithHeaders(endpoint string, o map[string]string) (*http.Re
 	}
 
 	return resp, nil
+
 }
 
 //postMultipart will perform a multiple part POST request
@@ -255,7 +214,7 @@ func (c *Client) Login(username string, password string) (loggedIn bool, err err
 
 	// check for correct status code
 	if resp.Status != "200 OK" {
-		err = errors.New("received bad response")
+		err = ErrBadResponse
 		return false, wrapper.Wrap(err, "couldnt log in")
 	}
 
@@ -280,14 +239,14 @@ func (c *Client) Login(username string, password string) (loggedIn bool, err err
 //Logout logs you out of the qbittorrent client
 //returns the current authentication status
 func (c *Client) Logout() (loggedOut bool, err error) {
-	resp, err := c.get("logout")
+	resp, err := c.get("logout", nil)
 	if err != nil {
 		return false, err
 	}
 
 	// check for correct status code
 	if resp.Status != "200 OK" {
-		err = errors.New("received bad response")
+		err = ErrBadResponse
 		return false, wrapper.Wrap(err, "couldnt log in")
 	}
 
@@ -299,7 +258,7 @@ func (c *Client) Logout() (loggedOut bool, err error) {
 
 //Shutdown shuts down the qbittorrent client
 func (c *Client) Shutdown() (shuttingDown bool, err error) {
-	resp, err := c.get("command/shutdown")
+	resp, err := c.get("command/shutdown", nil)
 
 	// return true if successful
 	return resp.Status == "200 OK", err
@@ -308,16 +267,7 @@ func (c *Client) Shutdown() (shuttingDown bool, err error) {
 //Torrents returns a list of all torrents in qbittorrent matching your filter
 func (c *Client) Torrents(filters map[string]string) (torrentList []BasicTorrent, err error) {
 	var t []BasicTorrent
-
-	// change "status"" filter to "filter" for backwards compatability with old WEBUI API docs
-	for k, v := range filters {
-		if k == "status" {
-			filters["filter"] = v
-			delete(filters, "status")
-		}
-
-	}
-	resp, err := c.getWithParams("query/torrents", filters)
+	resp, err := c.get("query/torrents", filters)
 	if err != nil {
 		return t, err
 	}
@@ -328,7 +278,7 @@ func (c *Client) Torrents(filters map[string]string) (torrentList []BasicTorrent
 //Torrent returns a specific torrent matching the infoHash
 func (c *Client) Torrent(infoHash string) (Torrent, error) {
 	var t Torrent
-	resp, err := c.get("query/propertiesGeneral/" + strings.ToLower(infoHash))
+	resp, err := c.get("query/propertiesGeneral/"+strings.ToLower(infoHash), nil)
 	if err != nil {
 		return t, err
 	}
@@ -339,7 +289,7 @@ func (c *Client) Torrent(infoHash string) (Torrent, error) {
 //TorrentTrackers returns all trackers for a specific torrent matching the infoHash
 func (c *Client) TorrentTrackers(infoHash string) ([]Tracker, error) {
 	var t []Tracker
-	resp, err := c.get("query/propertiesTrackers/" + strings.ToLower(infoHash))
+	resp, err := c.get("query/propertiesTrackers/"+strings.ToLower(infoHash), nil)
 	if err != nil {
 		return t, err
 	}
@@ -350,7 +300,7 @@ func (c *Client) TorrentTrackers(infoHash string) ([]Tracker, error) {
 //TorrentWebSeeds returns seeders for a specific torrent matching the infoHash
 func (c *Client) TorrentWebSeeds(infoHash string) ([]WebSeed, error) {
 	var w []WebSeed
-	resp, err := c.get("query/propertiesWebSeeds/" + strings.ToLower(infoHash))
+	resp, err := c.get("query/propertiesWebSeeds/"+strings.ToLower(infoHash), nil)
 	if err != nil {
 		return w, err
 	}
@@ -361,7 +311,7 @@ func (c *Client) TorrentWebSeeds(infoHash string) ([]WebSeed, error) {
 //TorrentFiles gets the files of a specifc torrent matching the infoHash
 func (c *Client) TorrentFiles(infoHash string) ([]TorrentFile, error) {
 	var t []TorrentFile
-	resp, err := c.get("query/propertiesFiles" + strings.ToLower(infoHash))
+	resp, err := c.get("query/propertiesFiles"+strings.ToLower(infoHash), nil)
 	if err != nil {
 		return t, err
 	}
@@ -376,7 +326,7 @@ func (c *Client) Sync(rid string) (Sync, error) {
 	params := make(map[string]string)
 	params["rid"] = rid
 
-	resp, err := c.getWithParams("sync/maindata", params)
+	resp, err := c.get("sync/maindata", params)
 	if err != nil {
 		return s, err
 	}
@@ -430,7 +380,7 @@ func (c *Client) Pause(infoHash string) (*http.Response, error) {
 
 //PauseAll pauses all torrents
 func (c *Client) PauseAll() (*http.Response, error) {
-	return c.get("command/pauseAll")
+	return c.get("command/pauseAll", nil)
 }
 
 //PauseMultiple pauses a list of torrents matching the infoHashes
@@ -464,7 +414,7 @@ func (c *Client) Resume(infoHash string) (*http.Response, error) {
 
 //ResumeAll resumes all torrents matching infoHashes
 func (c *Client) ResumeAll(infoHashList []string) (*http.Response, error) {
-	return c.get("command/resumeAll")
+	return c.get("command/resumeAll", nil)
 }
 
 //ResumeMultiple resumes a list of torrents matching infoHashes
@@ -521,7 +471,7 @@ func (c *Client) SetFilePriority(infoHash string, fileID string, priority string
 	priorities := [...]string{"0", "1", "2", "7"}
 	for _, v := range priorities {
 		if v == priority {
-			return nil, errors.New("priority not available")
+			return nil, ErrBadPriority
 		}
 	}
 
@@ -536,7 +486,7 @@ func (c *Client) SetFilePriority(infoHash string, fileID string, priority string
 //GetGlobalDownloadLimit gets the global download limit of your qbittorrent client
 func (c *Client) GetGlobalDownloadLimit() (limit int, err error) {
 	var l int
-	resp, err := c.get("command/getGlobalDlLimit")
+	resp, err := c.get("command/getGlobalDlLimit", nil)
 	if err != nil {
 		return l, err
 	}
@@ -554,7 +504,7 @@ func (c *Client) SetGlobalDownloadLimit(limit string) (*http.Response, error) {
 //GetGlobalUploadLimit gets the global upload limit of your qbittorrent client
 func (c *Client) GetGlobalUploadLimit() (limit int, err error) {
 	var l int
-	resp, err := c.get("command/getGlobalUpLimit")
+	resp, err := c.get("command/getGlobalUpLimit", nil)
 	if err != nil {
 		return l, err
 	}
@@ -609,13 +559,13 @@ func (c *Client) SetTorrentUploadLimit(infoHashList []string, limit string) (*ht
 
 //SetPreferences sets the preferences of your qbittorrent client
 func (c *Client) SetPreferences(params map[string]string) (*http.Response, error) {
-	return c.postWithHeaders("command/setPreferences", params)
+	return c.post("command/setPreferences", params)
 }
 
 //GetAlternativeSpeedStatus gets the alternative speed status of your qbittorrent client
 func (c *Client) GetAlternativeSpeedStatus() (status bool, err error) {
 	var s bool
-	resp, err := c.get("command/alternativeSpeedLimitsEnabled")
+	resp, err := c.get("command/alternativeSpeedLimitsEnabled", nil)
 	if err != nil {
 		return s, err
 	}
@@ -625,7 +575,7 @@ func (c *Client) GetAlternativeSpeedStatus() (status bool, err error) {
 
 //ToggleAlternativeSpeed toggles the alternative speed of your qbittorrent client
 func (c *Client) ToggleAlternativeSpeed() (*http.Response, error) {
-	return c.get("command/toggleAlternativeSpeedLimits")
+	return c.get("command/toggleAlternativeSpeedLimits", nil)
 }
 
 //ToggleSequentialDownload toggles the download sequence of a list of torrents
