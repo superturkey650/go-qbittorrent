@@ -19,7 +19,7 @@ Installation
 
 The best way is to install with go get::
 
-    $ go get github.com/jaredlmosley/go-qbittorrent/qbit
+    $ go get github.com/anmousyon/go-qbittorrent/qbt
 
 
 Quick usage guide
@@ -27,10 +27,10 @@ Quick usage guide
 .. code-block:: go
 
     import (
-        "jaredlmosely/go-qbittorrent/qbit
+        "jaredlmosely/go-anmousyon/go-qbittorrent/qbt
     )
 
-    qb := qbit.NewClient("http://localhost:8080/")
+    qb := qbt.NewClient("http://localhost:8080/")
 
 	qb.Login("admin", "your-secret-password")
     // not required when 'Bypass from localhost' setting is active.
