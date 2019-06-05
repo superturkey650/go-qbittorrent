@@ -27,7 +27,7 @@ Quick usage guide
 .. code-block:: go
 
     import (
-        "jaredlmosely/go-anmousyon/go-qbittorrent/qbt
+        "anmousyon/go-qbittorrent/qbt
     )
 
     qb := qbt.NewClient("http://localhost:8080/")
