@@ -184,7 +184,7 @@ Authors
 Maintainer
 ----------
 
-- `Jared Mosley (jaredlmosley) <https://www.github.com/jaredlmosley/>`__
+- `Jared Mosley (jaredlmosley) <https://www.github.com/superturkey650/>`__
 
 Contributors
 ------------
