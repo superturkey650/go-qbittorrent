@@ -19,7 +19,7 @@ Installation
 
 The best way is to install with go get::
 
-    $ go get github.com/anmousyon/go-qbittorrent/qbt
+    $ go get github.com/superturkey650/go-qbittorrent/qbt
 
 
 Quick usage guide
@@ -27,7 +27,7 @@ Quick usage guide
 .. code-block:: go
 
     import (
-        "anmousyon/go-qbittorrent/qbt
+        "superturkey650/go-qbittorrent/qbt
     )
 
     qb := qbt.NewClient("http://localhost:8080/")
