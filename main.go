@@ -16,7 +16,7 @@ func main() {
 		fmt.Println(err)
 	}
 
-	// were no using an filters so the options map is empty
+	// were not using any filters so the options map is empty
 	options := map[string]string{}
 	// set the path to the file
 	file := "/Users/me/Downloads/Source.Code.2011.1080p.BluRay.H264.AAC-RARBG-[rarbg.to].torrent"
