@@ -269,3 +269,13 @@ type TorrentInfo struct {
 	Offset int // => optional (negatives allowed)
 	Hashes string // separated by | => optional
 }
+
+type Category struct {
+	name string	`json:"name"`
+	savePath string `json:"savePath"`
+}
+
+type Categories struct {
+	Category map[string]Category
+}
+
