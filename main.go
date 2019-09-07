@@ -3,12 +3,11 @@ package main
 import (
 	"fmt"
 	"go-qbittorrent/qbt"
-	"go-qbittorrent/tools"
 )
 
 func main() {
 	// connect to qbittorrent client
-	qb := qbt.NewClient("http://localhost:8080/")
+	qb := qbt.NewClient("http://localhost:8080")
 
 	// login to the client
 	_, err := qb.Login("username", "password")
@@ -19,13 +18,16 @@ func main() {
 	// were not using any filters so the options map is empty
 	options := map[string]string{}
 	// set the path to the file
-	file := "/Users/me/Downloads/Source.Code.2011.1080p.BluRay.H264.AAC-RARBG-[rarbg.to].torrent"
+	//path := "/Users/me/Downloads/Source.Code.2011.1080p.BluRay.H264.AAC-RARBG-[rarbg.to].torrent"
+	link := "http://rarbg.to/download.php?id=ita4eys&h=e6c&f=Avengers.Endgame.2019.2160p.BluRay.x265.10bit.SDR.DTS-HD.MA.TrueHD.7.1.Atmos-SWTYBLZ-[rarbg.to].torrent"
 	// download the torrent using the file
 	// the wrapper will handle opening and closing the file for you
-	resp, err := qb.DownloadFromFile(file, options)
+	resp, err := qb.DownloadFromLink(link, options)
+
 	if err != nil {
-		tools.PrintResponse(resp.Body)
 		fmt.Println(err)
+	} else if resp != nil && (*resp).StatusCode != 200 {
+		fmt.Println("Unable to login")
 	} else {
 		fmt.Println("downloaded successful")
 	}
