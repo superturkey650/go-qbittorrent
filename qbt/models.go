@@ -267,11 +267,38 @@ type TorrentInfo struct {
 	Hashes   string // separated by | => optional
 }
 
+//Category of torrent
 type Category struct {
-	name     string `json:"name"`
-	savePath string `json:"savePath"`
+	Name     string `json:"name"`
+	SavePath string `json:"savePath"`
 }
 
+//Categories mapping
 type Categories struct {
 	Category map[string]Category
+}
+
+//LoginOptions contains all options for /login endpoint
+type LoginOptions struct {
+	Username string
+	Password string
+}
+
+//AddTrackersOptions contains all options for /addTrackers endpoint
+type AddTrackersOptions struct {
+	Hash string
+	Trackers string[]
+}
+
+//EditTrackerOptions contains all options for /editTracker endpoint
+type EditTrackerOptions struct {
+	Hash    string
+	OrigURL string
+	NewURL  string
+}
+
+//RemoveTrackersOptions contains all options for /removeTrackers endpoint
+type RemoveTrackersOptions struct {
+	Hash string
+	Trackers string[]
 }

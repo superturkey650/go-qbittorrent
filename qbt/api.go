@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -223,56 +222,50 @@ func (client *Client) postMultipartFile(endpoint string, fileName string, opts m
 
 //Login logs you in to the qbittorrent client
 //returns the current authentication status
-func (client *Client) Login(username string, password string) (loggedIn bool, err error) {
+func (client *Client) Login(opts LoginOptions) (err error) {
 	params := map[string]string{
-		"username": username,
-		"password": password,
+		"username": opts.Username,
+		"password": opts.Password,
 	}
 
 	resp, err := client.post("api/v2/auth/login", params)
 	if err != nil {
-		return loggedIn, err
-	} else if resp.Status != "200 OK" { // check for correct status code
-		return loggedIn, wrapper.Wrap(ErrBadResponse, "couldnt log in")
+		return err
+	} else if resp.StatusCode == 403 {
+		return wrapper.Errorf("User's IP is banned for too many failed login attempts")
 	}
-
-	// change authentication status so we know were authenticated in later requests
-	loggedIn = true
-	client.Authenticated = loggedIn
 
 	// add the cookie to cookie jar to authenticate later requests
 	if cookies := resp.Cookies(); len(cookies) > 0 {
 		cookieURL, _ := url.Parse("http://localhost:8080")
 		client.Jar.SetCookies(cookieURL, cookies)
+		// create a new client with the cookie jar and replace the old one
+		// so that all our later requests are authenticated
+		client.http = &http.Client{
+			Jar: client.Jar,
+		}
+	} else {
+		return wrapper.Errorf("Could not get cookie")
 	}
 
-	// create a new client with the cookie jar and replace the old one
-	// so that all our later requests are authenticated
-	client.http = &http.Client{
-		Jar: client.Jar,
-	}
+	// change authentication status so we know were authenticated in later requests
+	client.Authenticated = true
 
-	return loggedIn, nil
+	return nil
 }
 
 //Logout logs you out of the qbittorrent client
 //returns the current authentication status
-func (client *Client) Logout() (loggedOut bool, err error) {
+func (client *Client) Logout() (err error) {
 	resp, err := client.get("api/v2/auth/logout", nil)
 	if err != nil {
-		return loggedOut, err
-	}
-
-	// check for correct status code
-	if resp.Status != "200 OK" {
-		return loggedOut, wrapper.Wrap(ErrBadResponse, "couldnt log in")
+		return err
 	}
 
 	// change authentication status so we know were not authenticated in later requests
-	loggedOut = false
 	client.Authenticated = loggedOut
 
-	return loggedOut, nil
+	return nil
 }
 
 //ApplicationVersion of the qbittorrent client
@@ -573,9 +566,9 @@ func (client *Client) DownloadFromLink(link string, opts map[string]string) (*ht
 	opts["urls"] = link
 	resp, err := client.postMultipartData("api/v2/torrents/add", opts)
 	if err != nil {
-		err = fmt.Errorf("Could not download from link")
 		return nil, err
 	}
+
 	return resp, nil
 }
 
@@ -584,47 +577,70 @@ func (client *Client) DownloadFromFile(file string, options map[string]string) (
 	resp, err := client.postMultipartFile("api/v2/torrents/add", file, options)
 	if err != nil {
 		return false, err
+	} else if resp.StatusCode == 415 {
+		err = wrapper.Errorf("Torrent file is not valid")
 	}
 
 	return resp.StatusCode == 200, nil
 }
 
 //AddTrackers to a torrent
-func (client *Client) AddTrackers(hash string, trackers string) (*http.Response, error) {
+func (client *Client) AddTrackers(opts AddTrackersOptions) error {
 	params := make(map[string]string)
-	params["hash"] = strings.ToLower(hash)
-	params["urls"] = trackers // add escaping for ampersand in urls
+	params["hash"] = strings.ToLower(opts.hash)
+	params["urls"] = delimit(opts.trackers, "%0A") // add escaping for ampersand in urls
 
-	return client.post("api/v2/torrents/addTrackers", params)
+	resp, err := client.post("api/v2/torrents/addTrackers", params)
+	if err != nil {
+		return err
+	} else if resp != nil && (*resp).StatusCode == 404 {
+		return wrapper.Errorf("Torrent hash not found")
+	}
+	return nil
 }
 
 //EditTracker on a torrent
-func (client *Client) EditTracker(hash string, originalURL string, newURL string) (bool, error) {
-	opts := map[string]string{
-		"hash":    hash,
-		"origUrl": originalURL,
-		"newUrl":  newURL,
+func (client *Client) EditTracker(opts EditTrackerOptions) error {
+	params := map[string]string{
+		"hash":    options.hash,
+		"origUrl": options.origURL,
+		"newUrl":  options.newURL,
 	}
-	resp, err := client.get("api/v2/torrents/editTracker", opts)
+	resp, err := client.get("api/v2/torrents/editTracker", params)
 	if err != nil {
-		return false, err
+		return err
 	}
-
-	return resp.StatusCode == 200, nil //TODO: look into other statuses
+	switch sc := (*resp).StatusCode; sc {
+	case 400:
+		return wrapper.Errorf("newUrl is not a valid url")
+	case 404:
+		return wrapper.Errorf("Torrent hash was not found")
+	case 409:
+		return wrapper.Errorf("newUrl already exists for this torrent or origUrl was not found")
+	default:
+		return nil
+	}
 }
 
 //RemoveTrackers from a torrent
-func (client *Client) RemoveTrackers(hash string, urls []string) (bool, error) {
-	opts := map[string]string{
-		"hash": hash,
-		"urls": delimit(urls, "|"),
+func (client *Client) RemoveTrackers(opts RemoveTrackersOptions) (bool, error) {
+	params := map[string]string{
+		"hash": opts.hash,
+		"urls": delimit(opts.trackers, "|"),
 	}
-	resp, err := client.get("api/v2/torrents/removeTrackers", opts)
+	resp, err := client.get("api/v2/torrents/removeTrackers", params)
 	if err != nil {
 		return false, err
 	}
 
-	return resp.StatusCode == 200, nil //TODO: look into other statuses
+	switch sc := (*resp).StatusCode; sc {
+	case 404:
+		return wrapper.Errorf("Torrent hash was not found")
+	case 409:
+		return wrapper.Errorf("All URLs were not found")
+	default:
+		return false, nil
+	}
 }
 
 //IncreasePriority of torrents
