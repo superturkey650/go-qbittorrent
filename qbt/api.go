@@ -263,7 +263,7 @@ func (client *Client) Logout() (err error) {
 	}
 
 	// change authentication status so we know were not authenticated in later requests
-	client.Authenticated = loggedOut
+	client.Authenticated = (*resp).StatusCode == 200
 
 	return nil
 }
@@ -587,8 +587,8 @@ func (client *Client) DownloadFromFile(file string, options map[string]string) (
 //AddTrackers to a torrent
 func (client *Client) AddTrackers(opts AddTrackersOptions) error {
 	params := make(map[string]string)
-	params["hash"] = strings.ToLower(opts.hash)
-	params["urls"] = delimit(opts.trackers, "%0A") // add escaping for ampersand in urls
+	params["hash"] = strings.ToLower(opts.Hash)
+	params["urls"] = delimit(opts.Trackers, "%0A") // add escaping for ampersand in urls
 
 	resp, err := client.post("api/v2/torrents/addTrackers", params)
 	if err != nil {
@@ -602,9 +602,9 @@ func (client *Client) AddTrackers(opts AddTrackersOptions) error {
 //EditTracker on a torrent
 func (client *Client) EditTracker(opts EditTrackerOptions) error {
 	params := map[string]string{
-		"hash":    options.hash,
-		"origUrl": options.origURL,
-		"newUrl":  options.newURL,
+		"hash":    opts.Hash,
+		"origUrl": opts.OrigURL,
+		"newUrl":  opts.NewURL,
 	}
 	resp, err := client.get("api/v2/torrents/editTracker", params)
 	if err != nil {
@@ -625,8 +625,8 @@ func (client *Client) EditTracker(opts EditTrackerOptions) error {
 //RemoveTrackers from a torrent
 func (client *Client) RemoveTrackers(opts RemoveTrackersOptions) (bool, error) {
 	params := map[string]string{
-		"hash": opts.hash,
-		"urls": delimit(opts.trackers, "|"),
+		"hash": opts.Hash,
+		"urls": delimit(opts.Trackers, "|"),
 	}
 	resp, err := client.get("api/v2/torrents/removeTrackers", params)
 	if err != nil {
@@ -635,11 +635,11 @@ func (client *Client) RemoveTrackers(opts RemoveTrackersOptions) (bool, error) {
 
 	switch sc := (*resp).StatusCode; sc {
 	case 404:
-		return wrapper.Errorf("Torrent hash was not found")
+		return false, wrapper.Errorf("Torrent hash was not found")
 	case 409:
-		return wrapper.Errorf("All URLs were not found")
+		return false, wrapper.Errorf("All URLs were not found")
 	default:
-		return false, nil
+		return true, nil
 	}
 }
 

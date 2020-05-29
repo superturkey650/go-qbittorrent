@@ -2,15 +2,20 @@ package main
 
 import (
 	"fmt"
-	"go-qbittorrent/qbt"
+
+	"github.com/superturkey650/go-qbittorrent/qbt"
 )
 
 func main() {
 	// connect to qbittorrent client
-	qb := qbt.NewClient("http://localhost:8080")
+	qb := qbt.NewClient("http://localhost:8181")
 
 	// login to the client
-	_, err := qb.Login("username", "password")
+	loginOpts := qbt.LoginOptions{
+		Username: "username",
+		Password: "password",
+	}
+	err := qb.Login(loginOpts)
 	if err != nil {
 		fmt.Println(err)
 	}
