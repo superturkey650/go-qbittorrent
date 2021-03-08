@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/superturkey650/go-qbittorrent/qbt"
 )
 
@@ -20,20 +21,46 @@ func main() {
 		fmt.Println(err)
 	}
 
+	// ********************
+	// DOWNLOAD A TORRENT *
+	// ********************
+
 	// were not using any filters so the options map is empty
-	options := map[string]string{}
+	downloadOpts := qbt.DownloadOptions{}
 	// set the path to the file
 	//path := "/Users/me/Downloads/Source.Code.2011.1080p.BluRay.H264.AAC-RARBG-[rarbg.to].torrent"
-	link := "http://rarbg.to/download.php?id=ita4eys&h=e6c&f=Avengers.Endgame.2019.2160p.BluRay.x265.10bit.SDR.DTS-HD.MA.TrueHD.7.1.Atmos-SWTYBLZ-[rarbg.to].torrent"
+	links := []string{"http://rarbg.to/download.php?id=9buc5hp&h=d73&f=Courage.the.Cowardly.Dog.1999.S01.1080p.AMZN.WEBRip.DD2.0.x264-NOGRP%5Brartv%5D-[rarbg.to].torrent"}
 	// download the torrent using the file
 	// the wrapper will handle opening and closing the file for you
-	resp, err := qb.DownloadFromLink(link, options)
+	err = qb.DownloadLinks(links, downloadOpts)
 
 	if err != nil {
+		fmt.Println("[-] Download torrent from link")
 		fmt.Println(err)
-	} else if resp != nil && (*resp).StatusCode != 200 {
-		fmt.Println("Unable to login")
 	} else {
-		fmt.Println("downloaded successful")
+		fmt.Println("[+] Download torrent from link")
+	}
+
+	// ******************
+	// GET ALL TORRENTS *
+	// ******************
+	torrentsOpts := qbt.TorrentsOptions{}
+	filter := "inactive"
+	sort := "name"
+	hash := "d739f78a12b241ba62719b1064701ffbb45498a8"
+	torrentsOpts.Filter = &filter
+	torrentsOpts.Sort = &sort
+	torrentsOpts.Hashes = []string{hash}
+	torrents, err := qb.Torrents(torrentsOpts)
+	if err != nil {
+		fmt.Println("[-] Get torrent list")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Get torrent list")
+		if len(torrents) > 0 {
+			spew.Dump(torrents[0])
+		} else {
+			fmt.Println("No torrents found")
+		}
 	}
 }
