@@ -195,3 +195,6 @@ TODO
 ====
 
 - Write tests
+- Implement Transfer Endpoints
+- Implement RSS Endpoints
+- Implement Search Endpoints
