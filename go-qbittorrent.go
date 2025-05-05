@@ -44,6 +44,7 @@ func main() {
 	// ******************
 	// GET ALL TORRENTS *
 	// ******************
+
 	torrentsOpts := qbt.TorrentsOptions{}
 	//filter := "inactive"
 	sort := "name"
