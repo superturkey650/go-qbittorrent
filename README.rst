@@ -2,15 +2,15 @@
 go-qbittorrent
 ==================
 
-Golang wrapper for qBittorrent Web API (for versions above v3.1.x).
+Golang wrapper for qBittorrent Web API (for versions above v5.0.x).
 
 This wrapper is based on the methods described in `qBittorrent's Official Web API Documentation <https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-Documentation>`__
 
 This project is based on the Python wrapper by `v1k45 <https://github.com/v1k45/python-qBittorrent>`__
 
-Some methods are only supported in qBittorent's latest version (v3.3.1 when writing).
+Some methods are only supported in qBittorent's latest version (v5.0.5 when writing).
 
-It'll be best if you upgrade your client to a latest version.
+It'll be best if you upgrade your client to the latest version.
 
 An example can be found in main.go
 
