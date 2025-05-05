@@ -395,7 +395,7 @@ func (c *Client) TorrentPeers(opts TorrentPeersOptions) (torrentPeers TorrentPee
 	return torrentPeers, err
 }
 
-// TODO: Transfer Endpoints
+// Transfer Endpoints
 
 // Info returns info you usually see in qBt status bar.
 func (c *Client) Info(opts InfoOptions) (info Info, err error) {
@@ -409,7 +409,7 @@ func (c *Client) Info(opts InfoOptions) (info Info, err error) {
 	return info, err
 }
 
-// AltSpeedLimitsEnabled returns info you usually see in qBt status bar.
+// AltSpeedLimitsEnabled returns the alternative speed limits state
 func (c *Client) AltSpeedLimitsEnabled() (mode bool, err error) {
 	resp, err := c.get(apiBase+"transfer/speedLimitsMode", nil)
 	if err != nil {
@@ -423,16 +423,16 @@ func (c *Client) AltSpeedLimitsEnabled() (mode bool, err error) {
 	return mode, err
 }
 
-// ToggleAltSpeedLimits returns info you usually see in qBt status bar.
+// ToggleAltSpeedLimits toggles the alternative speed limits
 func (c *Client) ToggleAltSpeedLimits() (toggled bool, err error) {
-	resp, err := c.get(apiBase+"transfer/toggleSpeedLimitsMode", nil)
+	resp, err := c.post(apiBase+"transfer/toggleSpeedLimitsMode", nil)
 	if err != nil {
 		return toggled, err
 	}
 	return (resp.StatusCode == http.StatusOK), err
 }
 
-// DlLimit returns info you usually see in qBt status bar.
+// DlLimit returns the global download limit
 func (c *Client) DlLimit() (dlLimit int, err error) {
 	resp, err := c.get(apiBase+"transfer/downloadLimit", nil)
 	if err != nil {
@@ -444,17 +444,17 @@ func (c *Client) DlLimit() (dlLimit int, err error) {
 	return dlLimit, err
 }
 
-// SetDlLimit returns info you usually see in qBt status bar.
+// SetDlLimit sets the global download limit
 func (c *Client) SetDlLimit(limit int) (set bool, err error) {
 	params := map[string]string{"limit": strconv.Itoa(limit)}
-	resp, err := c.get(apiBase+"transfer/setDownloadLimit", params)
+	resp, err := c.post(apiBase+"transfer/setDownloadLimit", params)
 	if err != nil {
 		return set, err
 	}
 	return (resp.StatusCode == http.StatusOK), err
 }
 
-// UlLimit returns info you usually see in qBt status bar.
+// UlLimit returns the global upload limit
 func (c *Client) UlLimit() (ulLimit int, err error) {
 	resp, err := c.get(apiBase+"transfer/uploadLimit", nil)
 	if err != nil {
@@ -464,15 +464,27 @@ func (c *Client) UlLimit() (ulLimit int, err error) {
 	return ulLimit, err
 }
 
-// SetUlLimit returns info you usually see in qBt status bar.
+// SetUlLimit sets the global upload limit
 func (c *Client) SetUlLimit(limit int) (set bool, err error) {
 	params := map[string]string{"limit": strconv.Itoa(limit)}
-	resp, err := c.get(apiBase+"transfer/setUploadLimit", params)
+	resp, err := c.post(apiBase+"transfer/setUploadLimit", params)
 	if err != nil {
 		return set, err
 	}
 	return (resp.StatusCode == http.StatusOK), err
 }
+
+// BanPeers bans the given peers
+func (c *Client) BanPeers(peers []string) (set bool, err error) {
+	params := map[string]string{"peers": delimit(peers, "%7C")}
+	resp, err := c.post(apiBase+"transfer/banPeers", params)
+	if err != nil {
+		return set, err
+	}
+	return (resp.StatusCode == http.StatusOK), err
+}
+
+// Torrents Endpoints
 
 // Torrents returns a list of all torrents in qbittorrent matching your filter
 func (c *Client) Torrents(opts TorrentsOptions) (torrentList []TorrentInfo, err error) {
@@ -496,7 +508,7 @@ func (c *Client) Torrents(opts TorrentsOptions) (torrentList []TorrentInfo, err 
 		params["limit"] = strconv.Itoa(*opts.Limit)
 	}
 	if opts.Hashes != nil {
-		params["hashes"] = delimit(opts.Hashes, "%0A")
+		params["hashes"] = delimit(opts.Hashes, "%7C")
 	}
 	resp, err := c.get(apiBase+"torrents/info", params)
 	if err != nil {
@@ -1194,4 +1206,50 @@ func (c *Client) SetSuperSeeding(hashes []string, value bool) (bool, error) {
 		return false, err
 	}
 	return resp.StatusCode == http.StatusOK, nil //TODO: look into other statuses
+}
+
+// RenameFile for a single torrent
+func (c *Client) RenameFile(hash string, oldPath string, newPath string) (err error) {
+	opts := map[string]string{
+		"hash":    hash,
+		"oldPath": oldPath,
+		"newPath": newPath,
+	}
+	resp, err := c.post(apiBase+"torrents/renameFile", opts)
+	if err != nil {
+		return err
+	}
+	switch sc := (*resp).StatusCode; sc {
+	case http.StatusOK:
+		return nil
+	case http.StatusBadRequest:
+		return fmt.Errorf("missing newPath parameter")
+	case http.StatusConflict:
+		return fmt.Errorf("invalid newPath or oldPath, or newPath already in use")
+	default:
+		return fmt.Errorf("an unknown error occurred causing a status code of: %d", sc)
+	}
+}
+
+// RenameFolder for a single torrent
+func (c *Client) RenameFolder(hash string, oldPath string, newPath string) (err error) {
+	opts := map[string]string{
+		"hash":    hash,
+		"oldPath": oldPath,
+		"newPath": newPath,
+	}
+	resp, err := c.post(apiBase+"torrents/renameFile", opts)
+	if err != nil {
+		return err
+	}
+	switch sc := (*resp).StatusCode; sc {
+	case http.StatusOK:
+		return nil
+	case http.StatusBadRequest:
+		return fmt.Errorf("missing newPath parameter")
+	case http.StatusConflict:
+		return fmt.Errorf("invalid newPath or oldPath, or newPath already in use")
+	default:
+		return fmt.Errorf("an unknown error occurred causing a status code of: %d", sc)
+	}
 }
