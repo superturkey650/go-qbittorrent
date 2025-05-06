@@ -169,7 +169,7 @@ type BuildInfo struct {
 	LibtorrentVersion string `json:"libtorrent"`
 	BoostVersion      string `json:"boost"`
 	OpenSSLVersion    string `json:"openssl"`
-	AppBitness        string `json:"bitness"`
+	AppBitness        int    `json:"bitness"`
 }
 
 type Preferences struct {
@@ -189,7 +189,7 @@ type Preferences struct {
 	ScanDirs                           map[string]interface{} `json:"scan_dirs"`
 	ExportDir                          string                 `json:"export_dir"`
 	ExportDirFin                       string                 `json:"export_dir_fin"`
-	MailNotificationEnabled            string                 `json:"mail_notification_enabled"`
+	MailNotificationEnabled            bool                   `json:"mail_notification_enabled"`
 	MailNotificationSender             string                 `json:"mail_notification_sender"`
 	MailNotificationEmail              string                 `json:"mail_notification_email"`
 	MailNotificationSMPTP              string                 `json:"mail_notification_smtp"`
@@ -209,7 +209,7 @@ type Preferences struct {
 	SlowTorrentInactiveTimer           int                    `json:"slow_torrent_inactive_timer"`
 	MaxRatioEnabled                    bool                   `json:"max_ratio_enabled"`
 	MaxRatio                           float64                `json:"max_ratio"`
-	MaxRatioAct                        bool                   `json:"max_ratio_act"`
+	MaxRatioAct                        float64                `json:"max_ratio_act"`
 	ListenPort                         int                    `json:"listen_port"`
 	UPNP                               bool                   `json:"upnp"`
 	RandomPort                         bool                   `json:"random_port"`
@@ -238,7 +238,7 @@ type Preferences struct {
 	LSDEnabled                         bool                   `json:"lsd"`
 	Encryption                         int                    `json:"encryption"`
 	AnonymousMode                      bool                   `json:"anonymous_mode"`
-	ProxyType                          int                    `json:"proxy_type"`
+	ProxyType                          string                 `json:"proxy_type"`
 	ProxyIP                            string                 `json:"proxy_ip"`
 	ProxyPort                          int                    `json:"proxy_port"`
 	ProxyPeerConnections               bool                   `json:"proxy_peer_connections"`
@@ -248,7 +248,7 @@ type Preferences struct {
 	ProxyPassword                      string                 `json:"proxy_password"`
 	IPFilterEnabled                    bool                   `json:"ip_filter_enabled"`
 	IPFilterPath                       string                 `json:"ip_filter_path"`
-	IPFilterTrackers                   string                 `json:"ip_filter_trackers"`
+	IPFilterTrackers                   bool                   `json:"ip_filter_trackers"`
 	WebUIDomainList                    string                 `json:"web_ui_domain_list"`
 	WebUIAddress                       string                 `json:"web_ui_address"`
 	WebUIPort                          int                    `json:"web_ui_port"`
@@ -295,15 +295,15 @@ type PeerLog struct {
 
 // MainData
 type MainData struct {
-	Rid               int         `json:"rid"`
-	FullUpdate        bool        `json:"full_update"`
-	Torrents          []Torrent   `json:"torrents"`
-	TorrentsRemoved   []string    `json:"torrents_removed"`
-	Categories        []string    `json:"categories"`
-	CategoriesRemoved []string    `json:"categories_removed"`
-	Tags              []string    `json:"tags"`
-	TagsRemoved       []string    `json:"tags_removed"`
-	ServerState       serverState `json:"server_state"`
+	Rid               int                `json:"rid"`
+	FullUpdate        bool               `json:"full_update"`
+	Torrents          map[string]Torrent `json:"torrents"`
+	TorrentsRemoved   []string           `json:"torrents_removed"`
+	Categories        []string           `json:"categories"`
+	CategoriesRemoved []string           `json:"categories_removed"`
+	Tags              []string           `json:"tags"`
+	TagsRemoved       []string           `json:"tags_removed"`
+	ServerState       serverState        `json:"server_state"`
 }
 
 // Main Data Options

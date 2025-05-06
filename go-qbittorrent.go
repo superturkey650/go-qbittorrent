@@ -64,4 +64,178 @@ func main() {
 			fmt.Println("No torrents found")
 		}
 	}
+
+	// set up a test hash to pause and resume
+	testHashes := []string{"7cdd7029da5aeaf2589375c32bfc0a065a8ae3a7"}
+
+	// *****************
+	// PAUSE A TORRENT *
+	// *****************
+	err = qb.Pause(testHashes)
+	if err != nil {
+		fmt.Println("[-] Pause torrent")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Pause torrent")
+	}
+
+	// ******************
+	// RESUME A TORRENT *
+	// ******************
+	err = qb.Resume(testHashes)
+	if err != nil {
+		fmt.Println("[-] Resume torrent")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Resume torrent")
+	}
+
+	// ******************
+	// DELETE A TORRENT *
+	// ******************
+	// err = qb.Delete(testHashes, true)
+	// if err != nil {
+	// 	fmt.Println("[-] Delete torrent")
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println("[+] Delete torrent")
+	// }
+
+	appVersion, err := qb.ApplicationVersion()
+	if err != nil {
+		fmt.Println("[-] Application Version")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Application Version: ", appVersion)
+	}
+
+	webAPIVersion, err := qb.WebAPIVersion()
+	if err != nil {
+		fmt.Println("[-] Web API Version")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Web API Version: ", webAPIVersion)
+	}
+
+	buildInfo, err := qb.BuildInfo()
+	if err != nil {
+		fmt.Println("[-] Build Info")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Build Info: ", buildInfo)
+	}
+
+	preferences, err := qb.Preferences()
+	if err != nil {
+		fmt.Println("[-] Preferences")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Preferences: ", preferences)
+	}
+
+	// TODO: Preferences
+
+	defaultSavePath, err := qb.DefaultSavePath()
+	if err != nil {
+		fmt.Println("[-] Default Save Path")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Default Save Path: ", defaultSavePath)
+	}
+
+	// LOG ENDPOINTS
+
+	logs, err := qb.Logs(nil)
+	if err != nil {
+		fmt.Println("[-] Logs")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Logs: ", logs[34])
+	}
+
+	peerLogs, err := qb.PeerLogs(nil)
+	if err != nil {
+		fmt.Println("[-] Peer Logs")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Peer Logs: ", peerLogs)
+	}
+
+	// SYNC ENDPOINTS
+
+	mainData, err := qb.MainData("")
+	if err != nil {
+		fmt.Println("[-] Main Data")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Main Data: ", mainData)
+	}
+
+	torrentPeers, err := qb.TorrentPeers(testHashes[0], "")
+	if err != nil {
+		fmt.Println("[-] Torrent Peers")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Torrent Peers: ", torrentPeers)
+	}
+
+	// TRANSFER ENDPOINTS
+
+	info, err := qb.Info()
+	if err != nil {
+		fmt.Println("[-] Info")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Info: ", info)
+	}
+
+	altSpeedLimitsEnabled, err := qb.AltSpeedLimitsEnabled()
+	if err != nil {
+		fmt.Println("[-] Alt Speed Limits Enabled")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Alt Speed Limits Enabled: ", altSpeedLimitsEnabled)
+	}
+
+	// err = qb.ToggleAltSpeedLimits()
+	// if err != nil {
+	// 	fmt.Println("[-] Toggled Alt Speed Limits")
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println("[+] Toggled Alt Speed Limits")
+	// }
+
+	dlLimit, err := qb.DlLimit()
+	if err != nil {
+		fmt.Println("[-] Download Limit")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Download Limit: ", dlLimit)
+	}
+
+	err = qb.SetDlLimit(0)
+	if err != nil {
+		fmt.Println("[-] Set Download Limit")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Set Download Limit")
+	}
+
+	ulLimit, err := qb.UlLimit()
+	if err != nil {
+		fmt.Println("[-] Upload Limit")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Upload Limit: ", ulLimit)
+	}
+
+	err = qb.SetUlLimit(0)
+	if err != nil {
+		fmt.Println("[-] Set Upload Limit")
+		fmt.Println(err)
+	} else {
+		fmt.Println("[+] Set Upload Limit")
+	}
+
+	// TODO: Ban Peers
 }

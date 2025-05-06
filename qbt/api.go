@@ -271,10 +271,11 @@ func (c *Client) ApplicationVersion() (version string, err error) {
 	if err != nil {
 		return version, err
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&version); err != nil {
-		return version, err
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return version, fmt.Errorf("failed to read response body: %w", err)
 	}
-	return version, err
+	return string(body), err
 }
 
 // WebAPIVersion of the qbittorrent client
@@ -283,10 +284,12 @@ func (c *Client) WebAPIVersion() (version string, err error) {
 	if err != nil {
 		return version, err
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&version); err != nil {
-		return version, err
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return version, fmt.Errorf("failed to read response body: %w", err)
 	}
-	return version, err
+
+	return string(body), err
 }
 
 // BuildInfo of the qbittorrent client
@@ -325,20 +328,18 @@ func (c *Client) DefaultSavePath() (path string, err error) {
 	if err != nil {
 		return path, err
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&path); err != nil {
-		return path, err
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return path, fmt.Errorf("failed to read response body: %w", err)
 	}
-	return path, err
+
+	return string(body), err
 }
 
 // Shutdown shuts down the qbittorrent client
-func (c *Client) Shutdown() (shuttingDown bool, err error) {
-	resp, err := c.post(apiBase+"app/shutdown", nil)
-	if err != nil {
-		return shuttingDown, err
-	}
-	// return true if successful
-	return (resp.StatusCode == http.StatusOK), err
+func (c *Client) Shutdown() error {
+	_, err := c.post(apiBase+"app/shutdown", nil)
+	return err
 }
 
 // Log Endpoints
@@ -370,8 +371,9 @@ func (c *Client) PeerLogs(filters map[string]string) (logs []PeerLog, err error)
 // Sync Endpoints
 
 // MainData returns info you usually see in qBt status bar.
-func (c *Client) MainData(opts MainDataOptions) (mainData MainData, err error) {
-	resp, err := c.get(apiBase+"sync/mainData", nil)
+func (c *Client) MainData(rid string) (mainData MainData, err error) {
+	params := map[string]string{"rid": rid}
+	resp, err := c.get(apiBase+"sync/maindata", params)
 	if err != nil {
 		return mainData, err
 	}
@@ -382,8 +384,9 @@ func (c *Client) MainData(opts MainDataOptions) (mainData MainData, err error) {
 }
 
 // TorrentPeers returns info you usually see in qBt status bar.
-func (c *Client) TorrentPeers(opts TorrentPeersOptions) (torrentPeers TorrentPeers, err error) {
-	resp, err := c.get(apiBase+"sync/mainData", nil)
+func (c *Client) TorrentPeers(hash string, rid string) (torrentPeers TorrentPeers, err error) {
+	params := map[string]string{"hash": hash, "rid": rid}
+	resp, err := c.get(apiBase+"sync/torrentPeers", params)
 	if err != nil {
 		return torrentPeers, err
 	}
@@ -398,7 +401,7 @@ func (c *Client) TorrentPeers(opts TorrentPeersOptions) (torrentPeers TorrentPee
 // Transfer Endpoints
 
 // Info returns info you usually see in qBt status bar.
-func (c *Client) Info(opts InfoOptions) (info Info, err error) {
+func (c *Client) Info() (info Info, err error) {
 	resp, err := c.get(apiBase+"transfer/info", nil)
 	if err != nil {
 		return info, err
@@ -424,12 +427,9 @@ func (c *Client) AltSpeedLimitsEnabled() (mode bool, err error) {
 }
 
 // ToggleAltSpeedLimits toggles the alternative speed limits
-func (c *Client) ToggleAltSpeedLimits() (toggled bool, err error) {
-	resp, err := c.post(apiBase+"transfer/toggleSpeedLimitsMode", nil)
-	if err != nil {
-		return toggled, err
-	}
-	return (resp.StatusCode == http.StatusOK), err
+func (c *Client) ToggleAltSpeedLimits() error {
+	_, err := c.post(apiBase+"transfer/toggleSpeedLimitsMode", nil)
+	return err
 }
 
 // DlLimit returns the global download limit
@@ -445,13 +445,10 @@ func (c *Client) DlLimit() (dlLimit int, err error) {
 }
 
 // SetDlLimit sets the global download limit
-func (c *Client) SetDlLimit(limit int) (set bool, err error) {
+func (c *Client) SetDlLimit(limit int) error {
 	params := map[string]string{"limit": strconv.Itoa(limit)}
-	resp, err := c.post(apiBase+"transfer/setDownloadLimit", params)
-	if err != nil {
-		return set, err
-	}
-	return (resp.StatusCode == http.StatusOK), err
+	_, err := c.post(apiBase+"transfer/setDownloadLimit", params)
+	return err
 }
 
 // UlLimit returns the global upload limit
@@ -465,13 +462,10 @@ func (c *Client) UlLimit() (ulLimit int, err error) {
 }
 
 // SetUlLimit sets the global upload limit
-func (c *Client) SetUlLimit(limit int) (set bool, err error) {
+func (c *Client) SetUlLimit(limit int) error {
 	params := map[string]string{"limit": strconv.Itoa(limit)}
-	resp, err := c.post(apiBase+"transfer/setUploadLimit", params)
-	if err != nil {
-		return set, err
-	}
-	return (resp.StatusCode == http.StatusOK), err
+	_, err := c.post(apiBase+"transfer/setUploadLimit", params)
+	return err
 }
 
 // BanPeers bans the given peers
@@ -601,57 +595,39 @@ func (c *Client) TorrentPieceHashes(hash string) (hashes []string, err error) {
 // Pause torrents
 func (c *Client) Pause(hashes []string) error {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	_, err := c.get(apiBase+"torrents/pause", opts)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	_, err := c.post(apiBase+"torrents/stop", opts)
+	return err
 }
 
 // Resume torrents
-func (c *Client) Resume(hashes []string) (bool, error) {
+func (c *Client) Resume(hashes []string) error {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	resp, err := c.get(apiBase+"torrents/resume", opts)
-	if err != nil {
-		return false, err
-	}
-
-	return resp.StatusCode == http.StatusOK, nil
+	_, err := c.post(apiBase+"torrents/start", opts)
+	return err
 }
 
 // Delete torrents and optionally delete their files
-func (c *Client) Delete(hashes []string, deleteFiles bool) (bool, error) {
-	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	opts["deleteFiles"] = strconv.FormatBool(deleteFiles)
-	resp, err := c.get(apiBase+"torrents/delete", opts)
-	if err != nil {
-		return false, err
+func (c *Client) Delete(hashes []string, deleteFiles bool) error {
+	opts := map[string]string{
+		"hashes":      delimit(hashes, "|"),
+		"deleteFiles": strconv.FormatBool(deleteFiles),
 	}
-
-	return resp.StatusCode == http.StatusOK, nil
+	_, err := c.post(apiBase+"torrents/delete", opts)
+	return err
 }
 
 // Recheck torrents
-func (c *Client) Recheck(hashes []string) (bool, error) {
+func (c *Client) Recheck(hashes []string) error {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	resp, err := c.get(apiBase+"torrents/recheck", opts)
-	if err != nil {
-		return false, err
-	}
-
-	return resp.StatusCode == http.StatusOK, nil
+	_, err := c.get(apiBase+"torrents/recheck", opts)
+	return err
 }
 
 // Reannounce torrents
-func (c *Client) Reannounce(hashes []string) (bool, error) {
+func (c *Client) Reannounce(hashes []string) error {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	resp, err := c.get(apiBase+"torrents/reannounce", opts)
-	if err != nil {
-		return false, err
-	}
-
-	return resp.StatusCode == http.StatusOK, nil
+	_, err := c.get(apiBase+"torrents/reannounce", opts)
+	return err
 }
 
 // DownloadFromLink starts downloading a torrent from a link
