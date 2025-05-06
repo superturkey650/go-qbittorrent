@@ -619,14 +619,14 @@ func (c *Client) Delete(hashes []string, deleteFiles bool) error {
 // Recheck torrents
 func (c *Client) Recheck(hashes []string) error {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	_, err := c.get(apiBase+"torrents/recheck", opts)
+	_, err := c.post(apiBase+"torrents/recheck", opts)
 	return err
 }
 
 // Reannounce torrents
 func (c *Client) Reannounce(hashes []string) error {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	_, err := c.get(apiBase+"torrents/reannounce", opts)
+	_, err := c.post(apiBase+"torrents/reannounce", opts)
 	return err
 }
 
@@ -761,7 +761,7 @@ func (c *Client) EditTracker(hash string, origURL string, newURL string) error {
 		"origUrl": origURL,
 		"newUrl":  newURL,
 	}
-	resp, err := c.get(apiBase+"torrents/editTracker", params)
+	resp, err := c.post(apiBase+"torrents/editTracker", params)
 	if err != nil {
 		return err
 	}
@@ -783,7 +783,7 @@ func (c *Client) RemoveTrackers(hash string, trackers []string) error {
 		"hash": hash,
 		"urls": delimit(trackers, "|"),
 	}
-	resp, err := c.get(apiBase+"torrents/removeTrackers", params)
+	resp, err := c.post(apiBase+"torrents/removeTrackers", params)
 	if err != nil {
 		return err
 	}
@@ -803,7 +803,7 @@ func (c *Client) RemoveTrackers(hash string, trackers []string) error {
 // IncreasePriority of torrents
 func (c *Client) IncreasePriority(hashes []string) error {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	resp, err := c.get(apiBase+"torrents/IncreasePrio", opts)
+	resp, err := c.post(apiBase+"torrents/increasePrio", opts)
 	if err != nil {
 		return err
 	}
@@ -821,7 +821,7 @@ func (c *Client) IncreasePriority(hashes []string) error {
 // DecreasePriority of torrents
 func (c *Client) DecreasePriority(hashes []string) error {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	resp, err := c.get(apiBase+"torrents/DecreasePrio", opts)
+	resp, err := c.post(apiBase+"torrents/decreasePrio", opts)
 	if err != nil {
 		return err
 	}
@@ -839,7 +839,7 @@ func (c *Client) DecreasePriority(hashes []string) error {
 // MaxPriority maximizes the priority of torrents
 func (c *Client) MaxPriority(hashes []string) error {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	resp, err := c.get(apiBase+"torrents/TopPrio", opts)
+	resp, err := c.post(apiBase+"torrents/topPrio", opts)
 	if err != nil {
 		return err
 	}
@@ -857,7 +857,7 @@ func (c *Client) MaxPriority(hashes []string) error {
 // MinPriority maximizes the priority of torrents
 func (c *Client) MinPriority(hashes []string) error {
 	opts := map[string]string{"hashes": delimit(hashes, "|")}
-	resp, err := c.get(apiBase+"torrents/BottomPrio", opts)
+	resp, err := c.post(apiBase+"torrents/bottomPrio", opts)
 	if err != nil {
 		return err
 	}
@@ -915,32 +915,36 @@ func (c *Client) GetTorrentDownloadLimit(hashes []string) (limits map[string]int
 }
 
 // SetTorrentDownloadLimit for a list of torrents
-func (c *Client) SetTorrentDownloadLimit(hashes []string, limit int) (bool, error) {
+func (c *Client) SetTorrentDownloadLimit(hashes []string, limit int) error {
 	opts := map[string]string{
 		"hashes": delimit(hashes, "|"),
 		"limit":  strconv.Itoa(limit),
 	}
-	resp, err := c.post(apiBase+"torrents/setDownloadLimit", opts)
-	if err != nil {
-		return false, err
-	}
-
-	return resp.StatusCode == http.StatusOK, nil
+	_, err := c.post(apiBase+"torrents/setDownloadLimit", opts)
+	return err
 }
 
 // SetTorrentShareLimit for a list of torrents
-func (c *Client) SetTorrentShareLimit(hashes []string, ratioLimit int, seedingTimeLimit int) (bool, error) {
+func (c *Client) SetTorrentShareLimit(hashes []string, ratioLimit int, seedingTimeLimit int, inactiveSeedTimeLimit int) error {
 	opts := map[string]string{
-		"hashes":           delimit(hashes, "|"),
-		"ratioLimit":       strconv.Itoa(ratioLimit),
-		"seedingTimeLimit": strconv.Itoa(seedingTimeLimit),
+		"hashes":                   delimit(hashes, "|"),
+		"ratioLimit":               strconv.Itoa(ratioLimit),
+		"seedingTimeLimit":         strconv.Itoa(seedingTimeLimit),
+		"inactiveSeedingTimeLimit": strconv.Itoa(seedingTimeLimit),
 	}
 	resp, err := c.post(apiBase+"torrents/setShareLimits", opts)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return resp.StatusCode == http.StatusOK, nil
+	switch sc := (*resp).StatusCode; sc {
+	case http.StatusOK:
+		return nil
+	case http.StatusBadRequest:
+		return fmt.Errorf("a share limit or at least one id is invalid")
+	default:
+		return fmt.Errorf("an unknown error occurred causing a status code of: %d", sc)
+	}
 }
 
 // GetTorrentUploadLimit for a list of torrents
@@ -957,59 +961,82 @@ func (c *Client) GetTorrentUploadLimit(hashes []string) (limits map[string]int, 
 }
 
 // SetTorrentUploadLimit for a list of torrents
-func (c *Client) SetTorrentUploadLimit(hashes []string, limit int) (bool, error) {
+func (c *Client) SetTorrentUploadLimit(hashes []string, limit int) error {
 	opts := map[string]string{
 		"hashes": delimit(hashes, "|"),
 		"limit":  strconv.Itoa(limit),
 	}
-	resp, err := c.post(apiBase+"torrents/setUploadLimit", opts)
-	if err != nil {
-		return false, err
-	}
-
-	return resp.StatusCode == http.StatusOK, nil
+	_, err := c.post(apiBase+"torrents/setUploadLimit", opts)
+	return err
 }
 
 // SetTorrentLocation for a list of torrents
-func (c *Client) SetTorrentLocation(hashes []string, location string) (bool, error) {
+func (c *Client) SetTorrentLocation(hashes []string, location string) error {
 	opts := map[string]string{
 		"hashes":   delimit(hashes, "|"),
 		"location": location,
 	}
 	resp, err := c.post(apiBase+"torrents/setLocation", opts)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return resp.StatusCode == http.StatusOK, nil //TODO: look into other statuses
+	switch sc := (*resp).StatusCode; sc {
+	case http.StatusOK:
+		return nil
+	case http.StatusBadRequest:
+		return fmt.Errorf("save path is empty")
+	case http.StatusForbidden:
+		return fmt.Errorf("user does not have write access to directory")
+	case http.StatusConflict:
+		return fmt.Errorf("unable to create save path directory")
+	default:
+		return fmt.Errorf("an unknown error occurred causing a status code of: %d", sc)
+	}
 }
 
 // SetTorrentName for a torrent
-func (c *Client) SetTorrentName(hash string, name string) (bool, error) {
+func (c *Client) SetTorrentName(hash string, name string) error {
 	opts := map[string]string{
 		"hash": hash,
 		"name": name,
 	}
 	resp, err := c.post(apiBase+"torrents/rename", opts)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return resp.StatusCode == http.StatusOK, nil //TODO: look into other statuses
+	switch sc := (*resp).StatusCode; sc {
+	case http.StatusOK:
+		return nil
+	case http.StatusNotFound:
+		return fmt.Errorf("torrent hash is invalid")
+	case http.StatusConflict:
+		return fmt.Errorf("torrent name is empty")
+	default:
+		return fmt.Errorf("an unknown error occurred causing a status code of: %d", sc)
+	}
 }
 
 // SetTorrentCategory for a list of torrents
-func (c *Client) SetTorrentCategory(hashes []string, category string) (bool, error) {
+func (c *Client) SetTorrentCategory(hashes []string, category string) error {
 	opts := map[string]string{
 		"hashes":   delimit(hashes, "|"),
 		"category": category,
 	}
 	resp, err := c.post(apiBase+"torrents/setCategory", opts)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return resp.StatusCode == http.StatusOK, nil //TODO: look into other statuses
+	switch sc := (*resp).StatusCode; sc {
+	case http.StatusOK:
+		return nil
+	case http.StatusConflict:
+		return fmt.Errorf("category name does not exist")
+	default:
+		return fmt.Errorf("an unknown error occurred causing a status code of: %d", sc)
+	}
 }
 
 // GetCategories used by client
@@ -1025,42 +1052,56 @@ func (c *Client) GetCategories() (categories Categories, err error) {
 }
 
 // CreateCategory for use by client
-func (c *Client) CreateCategory(category string, savePath string) (bool, error) {
+func (c *Client) CreateCategory(category string, savePath string) error {
 	opts := map[string]string{
 		"category": category,
 		"savePath": savePath,
 	}
 	resp, err := c.post(apiBase+"torrents/createCategory", opts)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return resp.StatusCode == http.StatusOK, nil //TODO: look into other statuses
+	switch sc := (*resp).StatusCode; sc {
+	case http.StatusOK:
+		return nil
+	case http.StatusBadRequest:
+		return fmt.Errorf("category name is empty")
+	case http.StatusConflict:
+		return fmt.Errorf("category name is invalid")
+	default:
+		return fmt.Errorf("an unknown error occurred causing a status code of: %d", sc)
+	}
 }
 
 // UpdateCategory used by client
-func (c *Client) UpdateCategory(category string, savePath string) (bool, error) {
+func (c *Client) UpdateCategory(category string, savePath string) error {
 	opts := map[string]string{
 		"category": category,
 		"savePath": savePath,
 	}
 	resp, err := c.post(apiBase+"torrents/editCategory", opts)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return resp.StatusCode == http.StatusOK, nil //TODO: look into other statuses
+	switch sc := (*resp).StatusCode; sc {
+	case http.StatusOK:
+		return nil
+	case http.StatusBadRequest:
+		return fmt.Errorf("category name is empty")
+	case http.StatusConflict:
+		return fmt.Errorf("category editing failed")
+	default:
+		return fmt.Errorf("an unknown error occurred causing a status code of: %d", sc)
+	}
 }
 
 // DeleteCategories used by client
-func (c *Client) DeleteCategories(categories []string) (bool, error) {
+func (c *Client) DeleteCategories(categories []string) error {
 	opts := map[string]string{"categories": delimit(categories, "\n")}
-	resp, err := c.post(apiBase+"torrents/removeCategories", opts)
-	if err != nil {
-		return false, err
-	}
-
-	return resp.StatusCode == http.StatusOK, nil //TODO: look into other statuses
+	_, err := c.post(apiBase+"torrents/removeCategories", opts)
+	return err
 }
 
 // AddTorrentTags to a list of torrents
