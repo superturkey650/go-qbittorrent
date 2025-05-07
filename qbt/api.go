@@ -224,15 +224,8 @@ func (c *Client) postMultipartFile(endpoint string, fileName string, opts map[st
 
 // Login authenticates with the qBittorrent client using the provided credentials.
 // It returns an error if authentication fails or if the client's IP is banned.
-func (c *Client) Login(opts LoginOptions) (err error) {
-	params := map[string]string{}
-
-	if opts.Username != "" {
-		params["username"] = opts.Username
-	}
-	if opts.Password != "" {
-		params["password"] = opts.Password
-	}
+func (c *Client) Login(username string, password string) (err error) {
+	params := map[string]string{"username": username, "password": password}
 
 	if c.http == nil {
 		c.http = &http.Client{Jar: c.Jar}
@@ -686,7 +679,7 @@ func (c *Client) DownloadLinks(links []string, opts DownloadOptions) error {
 }
 
 // DownloadFromFile starts downloading a torrent from a file
-func (c *Client) DownloadFromFile(torrents string, opts DownloadOptions) error {
+func (c *Client) DownloadFiles(torrents string, opts DownloadOptions) error {
 	params := map[string]string{}
 	if torrents == "" {
 		return fmt.Errorf("at least one file must be present")

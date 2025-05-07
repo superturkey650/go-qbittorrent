@@ -381,31 +381,8 @@ type Categories struct {
 	Category map[string]Category
 }
 
-// LoginOptions contains all options for /login endpoint
-type LoginOptions struct {
-	Username string
-	Password string
-}
-
-// AddTrackersOptions contains all options for /addTrackers endpoint
-type AddTrackersOptions struct {
-	Hash     string
-	Trackers []string
-}
-
-// EditTrackerOptions contains all options for /editTracker endpoint
-type EditTrackerOptions struct {
-	Hash    string
-	OrigURL string
-	NewURL  string
-}
-
-// RemoveTrackersOptions contains all options for /removeTrackers endpoint
-type RemoveTrackersOptions struct {
-	Hash     string
-	Trackers []string
-}
-
+// DownloadOptions stores optional parameters for downloading torrents
+// Uses pointers instead of functional parameters to allow for zero valued options
 type DownloadOptions struct {
 	Savepath                   *string
 	Cookie                     *string
@@ -419,14 +396,4 @@ type DownloadOptions struct {
 	SequentialDownload         *bool
 	AutomaticTorrentManagement *bool
 	FirstLastPiecePriority     *bool
-}
-
-type InfoOptions struct {
-	Filter   *string
-	Category *string
-	Sort     *string
-	Reverse  *bool
-	Limit    *int
-	Offset   *int
-	Hashes   []string
 }
