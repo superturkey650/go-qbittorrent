@@ -224,15 +224,8 @@ func (c *Client) postMultipartFile(endpoint string, fileName string, opts map[st
 
 // Login authenticates with the qBittorrent client using the provided credentials.
 // It returns an error if authentication fails or if the client's IP is banned.
-func (c *Client) Login(opts LoginOptions) (err error) {
-	params := map[string]string{}
-
-	if opts.Username != "" {
-		params["username"] = opts.Username
-	}
-	if opts.Password != "" {
-		params["password"] = opts.Password
-	}
+func (c *Client) Login(username string, password string) (err error) {
+	params := map[string]string{"username": username, "password": password}
 
 	if c.http == nil {
 		c.http = &http.Client{Jar: c.Jar}

@@ -21,11 +21,7 @@ func main() {
 	// Application Endpoints
 
 	// login to the client
-	loginOpts := qbt.LoginOptions{
-		Username: "username",
-		Password: "password",
-	}
-	err := qb.Login(loginOpts)
+	err := qb.Login("username", "password")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -420,7 +416,7 @@ func main() {
 		fmt.Println("[+] Create Category")
 	}
 
-	err = qb.UpdateCategory("test_categoria", "/Users/jared/Downloads/test")
+	err = qb.UpdateCategory("test_category", "/Users/jared/Downloads")
 	if err != nil {
 		fmt.Println("[-] Update Category")
 		fmt.Println(err)
