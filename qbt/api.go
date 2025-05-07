@@ -679,7 +679,7 @@ func (c *Client) DownloadLinks(links []string, opts DownloadOptions) error {
 }
 
 // DownloadFromFile starts downloading a torrent from a file
-func (c *Client) DownloadFromFile(torrents string, opts DownloadOptions) error {
+func (c *Client) DownloadFiles(torrents string, opts DownloadOptions) error {
 	params := map[string]string{}
 	if torrents == "" {
 		return fmt.Errorf("at least one file must be present")

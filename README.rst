@@ -38,7 +38,7 @@ Quick usage guide
     torrents = qb.Torrents()
 
     for torrent := range torrents{
-        fmt.Println(torrent.name)
+        fmt.Println(torrent.Name)
     }
 
 API methods
@@ -55,18 +55,18 @@ Getting torrents
 - Filter torrents::
 .. code-block:: go
 
-    filters := map[string]string{
-        "filter": "downloading",
-        "category": "my category",
-    }
+    filters := qbt.TorrentsOptions{
+		Filter: ptrString("downloading"),
+        Category: ptrString("my category"),
+	}
     qb.Torrents(filters)
     // This will return all torrents which are currently
     // downloading and are labeled as `my category`.
 
-    filters := map[string]string{
-        "filter": paused,
-        "sort": ratio,
-    }
+    filters := qbt.TorrentsOptions{
+		Filter: ptrString("paused"),
+        Sort: ptrString("ratio"),
+	}
     qb.Torrents(filters)
     // This will return all paused torrents sorted by their Leech:Seed ratio.
 
@@ -78,87 +78,62 @@ Downloading torrents
 - Download torrents by link::
 .. code-block:: go
 
-    options := map[string]string{}
-    magnetLink = "magnet:?xt=urn:btih:e334ab9ddd91c10938a7....."
-    qb.DownloadFromLink(magnetLink, options)
-
-    // Will return response object with `200:OK` status code
-    // regardless of sucess of failure.
-
-- Download multipe torrents by looping over links::
-.. code-block:: go
-
-    options := map[string]string{}
-    links := [...]string{link1, link2, link3}
-    for l := range links{
-        qb.DownloadFromLink(l, options)
-    }
+    options := qbt.DownloadOptions{}
+    magnetLinks = []string{"magnet:?xt=urn:btih:e334ab9ddd91c10938a7....."}
+    qb.DownloadLinks(magnetLinks, options)
 
 - Downloading torrents by file::
 .. code-block:: go
 
-    options := map[string]string{}
-    file = "path/to/file.torrent"
-    qb.DownloadFromFile(file, options)
+    options := qbt.DownloadOptions{}
+    files = []string{"path/to/file.torrent"}
+    qb.DownloadFiles(files, options)
 
 - Downloading multiple torrents by using files::
 .. code-block:: go
 
-    options := map[string]string{}
-    file = [...]string{path/to/file1, path/to/file2, path/to/file3}
-    qb.DownloadFromFile(file, options)
+    options := qbt.DownloadOptions{}
+    files = []string{"path/to/file1", "path/to/file2", "path/to/file3"}
+    qb.DownloadFiles(files, options)
 
 - Specifing save path for downloads::
 .. code-block:: go
 
     savePath = "/home/user/Downloads/special-dir/"
-    options := map[string]string{
-        "savepath": savePath
+    options := qbt.DownloadOptions{
+        Savepath: ptrString(savePath),
     }
-    file = "path/to/file.torrent"
-    qb.DownloadFromFile(file, options)
+    files = []string{"path/to/file.torrent"}
+    qb.DownloadFiles(files, options)
 
     // same for links.
     savePath = "/home/user/Downloads/special-dir/"
-    options := map[string]string{
-        "savepath": savePath
+    options := qbt.DownloadOptions{
+        Savepath: ptrString(savePath),
     }
-    magnetLink = "magnet:?xt=urn:btih:e334ab9ddd91c10938a7....."
-    qb.DownloadFromLink(magnetLink, options)
+    magnetLinks = []string{"magnet:?xt=urn:btih:e334ab9ddd91c10938a7....."}
+    qb.DownloadLinks(magnetLinks, options)
 
 - Applying labels to downloads::
 .. code-block:: go
 
-    label = "secret-files ;)"
-    options := map[string]string{
-        "label": label
+    label = "secret-files"
+    options := qbt.DownloadOptions{
+        Label: ptrString(label),
     }
-    file = "path/to/file.torrent"
-    qb.DownloadFromFile(file, options)
+    files = []string{"path/to/file.torrent"}
+    qb.DownloadFiles(files, options)
 
     // same for links.
     category = "anime"
-    options := map[string]string{
-        "label": label
+    options := qbt.DownloadOptions{
+        Category: ptrString(category),
     }
-    magnetLink = "magnet:?xt=urn:btih:e334ab9ddd91c10938a7....."
-    qb.DownloadFromLink(magnetLink, options)
+    magnetLinks = []string{"magnet:?xt=urn:btih:e334ab9ddd91c10938a7....."}
+    qb.DownloadLinks(magnetLinks, options)
 
 Pause / Resume torrents
 -----------------------
-
-- Pausing/ Resuming all torrents::
-.. code-block:: go
-
-    qb.PauseAll()
-    qb.ResumeAll()
-
-- Pausing/ Resuming a specific torrent::
-.. code-block:: go
-
-    infoHash = "e334ab9ddd....infohash....5d7fff526cb4"
-    qb.Pause(infoHash)
-    qb.Resume(infoHash)
 
 - Pausing/ Resuming multiple torrents::
 .. code-block:: go
@@ -169,17 +144,9 @@ Pause / Resume torrents
         "4c859243615......infohash......8b1f20108",
     }
 
-    qb.PauseMultiple(infoHashes)
-    qb.ResumeMultiple(infoHashes)
+    qb.Pause(infoHashes)
+    qb.Resume(infoHashes)
 
-
-Full API method documentation
-=============================
-
-All API methods of qBittorrent are mentioned in docs.txt
-
-Authors
-=======
 
 Maintainer
 ----------
