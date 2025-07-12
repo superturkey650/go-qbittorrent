@@ -130,6 +130,7 @@ type WebSeed struct {
 
 // TorrentFile holds a torrent file object from qbittorrent
 type TorrentFile struct {
+	Index        string  `json:"index"`
 	IsSeed       bool    `json:"is_seed"`
 	Name         string  `json:"name"`
 	Availability float32 `json:"availability"`
