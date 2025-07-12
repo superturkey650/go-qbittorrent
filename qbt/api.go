@@ -877,7 +877,7 @@ func (c *Client) FilePriority(hash string, ids []int, priority int) error {
 		"id":       delimit(formattedIds, "|"),
 		"priority": strconv.Itoa(priority),
 	}
-	resp, err := c.get(apiBase+"torrents/filePrio", opts)
+	resp, err := c.post(apiBase+"torrents/filePrio", opts)
 	if err != nil {
 		return err
 	}
