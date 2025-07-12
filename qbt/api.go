@@ -866,6 +866,8 @@ func (c *Client) MinPriority(hashes []string) error {
 }
 
 // FilePriority for a torrent
+// Note: Use TorrentFile.Index as the id when calling this function,
+// as required by the qBittorrent API (/torrents/filePrio).
 func (c *Client) FilePriority(hash string, ids []int, priority int) error {
 	formattedIds := []string{}
 	for _, id := range ids {
@@ -877,7 +879,7 @@ func (c *Client) FilePriority(hash string, ids []int, priority int) error {
 		"id":       delimit(formattedIds, "|"),
 		"priority": strconv.Itoa(priority),
 	}
-	resp, err := c.get(apiBase+"torrents/filePrio", opts)
+	resp, err := c.post(apiBase+"torrents/filePrio", opts)
 	if err != nil {
 		return err
 	}
