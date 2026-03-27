@@ -61,6 +61,7 @@ type Torrent struct {
 	UpLimit            int     `json:"up_limit"`
 	UpSpeed            int     `json:"up_speed"`
 	UpSpeedAvg         int     `json:"up_speed_avg"`
+	Private            bool    `json:"private"`
 }
 
 type TorrentInfo struct {
@@ -109,6 +110,7 @@ type TorrentInfo struct {
 	Uploaded          int64   `json:"uploaded"`
 	UploadedSession   int64   `json:"uploaded_session"`
 	Upspeed           int64   `json:"upspeed"`
+	Private           bool    `json:"private"`
 }
 
 // Tracker holds a tracker object from qbittorrent
