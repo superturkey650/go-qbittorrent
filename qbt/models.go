@@ -140,11 +140,12 @@ type TorrentFile struct {
 }
 
 // serverState holds the server state struct
-type serverState struct {
+type ServerState struct {
 	ConnectionStatus  string `json:"connection_status"`
 	DhtNodes          int    `json:"dht_nodes"`
 	DlInfoData        int    `json:"dl_info_data"`
 	DlInfoSpeed       int    `json:"dl_info_speed"`
+	FreeSpaceOnDisk   int    `json:"free_space_on_disk"`
 	DlRateLimit       int    `json:"dl_rate_limit"`
 	Queueing          bool   `json:"queueing"`
 	RefreshInterval   int    `json:"refresh_interval"`
@@ -160,7 +161,7 @@ type Sync struct {
 	Categories  []string           `json:"categories"`
 	FullUpdate  bool               `json:"full_update"`
 	Rid         int                `json:"rid"`
-	ServerState serverState        `json:"server_state"`
+	ServerState ServerState        `json:"server_state"`
 	Torrents    map[string]Torrent `json:"torrents"`
 }
 
@@ -295,15 +296,15 @@ type PeerLog struct {
 
 // MainData
 type MainData struct {
-	Rid               int                `json:"rid"`
-	FullUpdate        bool               `json:"full_update"`
-	Torrents          map[string]Torrent `json:"torrents"`
-	TorrentsRemoved   []string           `json:"torrents_removed"`
-	Categories        []string           `json:"categories"`
-	CategoriesRemoved []string           `json:"categories_removed"`
-	Tags              []string           `json:"tags"`
-	TagsRemoved       []string           `json:"tags_removed"`
-	ServerState       serverState        `json:"server_state"`
+	Rid               int                 `json:"rid"`
+	FullUpdate        bool                `json:"full_update"`
+	Torrents          map[string]Torrent  `json:"torrents"`
+	TorrentsRemoved   []string            `json:"torrents_removed"`
+	Categories        map[string]Category `json:"categories"`
+	CategoriesRemoved []string            `json:"categories_removed"`
+	Tags              []string            `json:"tags"`
+	TagsRemoved       []string            `json:"tags_removed"`
+	ServerState       ServerState         `json:"server_state"`
 }
 
 // Main Data Options
